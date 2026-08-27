@@ -1,0 +1,7 @@
+---
+import AdminApp from "@components/admin/AdminApp.svelte";
+import adminCss from "@/styles/admin.css?raw";
+---
+
+<style is:inline set:html={adminCss}></style>
+<AdminApp client:load initialView="login" />

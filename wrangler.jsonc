@@ -1,0 +1,16 @@
+{
+	"name": "firefly",
+	"compatibility_date": "2025-01-01",
+	"compatibility_flags": ["nodejs_compat"],
+	"pages_build_output_dir": "./dist",
+	"d1_databases": [{
+		"binding": "DB",
+		"database_name": "firefly-admin-local",
+		"database_id": "firefly-admin-local",
+		"migrations_dir": "./migrations"
+	}],
+	"r2_buckets": [{
+		"binding": "MEDIA_BUCKET",
+		"bucket_name": "firefly-media"
+	}]
+}

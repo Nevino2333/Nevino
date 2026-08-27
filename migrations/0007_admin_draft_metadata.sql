@@ -1,0 +1,5 @@
+ALTER TABLE admin_drafts ADD COLUMN ai_summary TEXT NOT NULL DEFAULT '';
+ALTER TABLE admin_drafts ADD COLUMN author TEXT NOT NULL DEFAULT '';
+ALTER TABLE admin_drafts ADD COLUMN source_link TEXT NOT NULL DEFAULT '';
+ALTER TABLE admin_drafts ADD COLUMN license_name TEXT NOT NULL DEFAULT '';
+ALTER TABLE admin_drafts ADD COLUMN license_url TEXT NOT NULL DEFAULT '';
