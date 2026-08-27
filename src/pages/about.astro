@@ -3,7 +3,7 @@ import { getEntry, render } from "astro:content";
 import Markdown from "@components/common/Markdown.astro";
 import { Icon } from "astro-icon/components";
 import ImageWrapper from "@/components/common/ImageWrapper.astro";
-import { getEnabledFriends, profileConfig } from "@/config";
+import { getEnabledFriends, profileConfig, siteConfig } from "@/config";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
 import MainGridLayout from "@/layouts/MainGridLayout.astro";
@@ -23,7 +23,7 @@ const changelogEntries = [
 		description:
 			"把友链、朋友圈、开屏动画和评论区的视觉连接重新梳理成一套更完整的体验。",
 		href: "/changelog/",
-		tags: ["Aemeath V1.1.1", "UI"],
+		tags: ["Nevino V1.0.0", "UI"],
 		tone: "blue",
 		icon: "material-symbols:auto-awesome-rounded",
 	},
@@ -32,7 +32,7 @@ const changelogEntries = [
 		description:
 			"统一关于我、导航和站点信息中的博客版本展示，让每个入口都说同一种语言。",
 		href: "/changelog/",
-		tags: ["Aemeath V1.1.1", "维护"],
+		tags: ["Nevino V1.0.0", "维护"],
 		tone: "mint",
 		icon: "material-symbols:history-rounded",
 	},
@@ -40,7 +40,7 @@ const changelogEntries = [
 		title: "朋友圈 RSS 聚合",
 		description: "把友链博客最近写下的文章收进一条持续发生的时间线。",
 		href: "/moments/",
-		tags: ["Aemeath V1.1.1", "RSS"],
+		tags: ["Nevino V1.0.0", "RSS"],
 		tone: "gold",
 		icon: "material-symbols:rss-feed-rounded",
 	},
@@ -48,29 +48,19 @@ const changelogEntries = [
 		title: "正在持续记录",
 		description: "项目复盘、踩坑经验与日常思考，会继续在这里慢慢留下。",
 		href: "/changelog/",
-		tags: ["Aemeath V1.1.1", "持续更新"],
+		tags: ["Nevino V1.0.0", "持续更新"],
 		tone: "violet",
 		icon: "material-symbols:edit-note-rounded",
 	},
 ];
 
-const personalProjects = [
-	{
-		title: "个人博客",
-		description:
-			"记录学习过程、踩坑经验与项目实践，把做过的事情慢慢整理成可以回看的文字。",
-		tags: ["Astro", "Vue", "持续更新"],
-		tone: "violet",
-		icon: "material-symbols:edit-note-rounded",
-	},
-	{
-		title: "未完待续",
-		description: "新的想法还在路上，会把它们慢慢做出来，再收进这里。",
-		tags: ["个人项目", "进行中"],
-		tone: "gold",
-		icon: "material-symbols:history-rounded",
-	},
-];
+const personalProjects: {
+	title: string;
+	description: string;
+	tags: string[];
+	tone: string;
+	icon: string;
+}[] = [];
 
 const recentActivity = [
 	{
@@ -203,11 +193,13 @@ const serverStats = [
 				<Icon is:inline name="material-symbols:history-rounded" aria-hidden="true" />
 				<span>更新日志</span>
 			</a>
-			<a class="profile-tab" href="/friends/">
-				<Icon is:inline name="material-symbols:link-rounded" aria-hidden="true" />
-				<span>友链</span>
-				<em>{friendCount}</em>
-			</a>
+			{siteConfig.pages.friends && (
+				<a class="profile-tab" href="/friends/">
+					<Icon is:inline name="material-symbols:link-rounded" aria-hidden="true" />
+					<span>友链</span>
+					<em>{friendCount}</em>
+				</a>
+			)}
 			<a class="profile-tab" href="/moments/">
 				<Icon is:inline name="material-symbols:rss-feed-rounded" aria-hidden="true" />
 				<span>朋友圈</span>
@@ -232,29 +224,31 @@ const serverStats = [
 					</div>
 				</section>
 
-				<section class="profile-panel card-base" aria-labelledby="personal-projects-title">
-					<header class="profile-section-heading">
-						<div>
-							<p class="profile-section-kicker">MY PROJECTS</p>
-							<h2 id="personal-projects-title">本人项目</h2>
-						</div>
-						<span class="profile-section-note">持续迭代中</span>
-					</header>
-					<div class="project-grid">
-						{personalProjects.map((project) => (
-							<article class:list={["project-card", `project-card--${project.tone}`]}>
-								<span class="project-card__icon" aria-hidden="true"><Icon is:inline name={project.icon} /></span>
-								<span class="project-card__body">
-									<strong>{project.title}</strong>
-									<span>{project.description}</span>
-									<span class="project-card__tags">
-										{project.tags.map((tag) => <em>{tag}</em>)}
+				{personalProjects.length > 0 && (
+					<section class="profile-panel card-base" aria-labelledby="personal-projects-title">
+						<header class="profile-section-heading">
+							<div>
+								<p class="profile-section-kicker">MY PROJECTS</p>
+								<h2 id="personal-projects-title">本人项目</h2>
+							</div>
+							<span class="profile-section-note">持续迭代中</span>
+						</header>
+						<div class="project-grid">
+							{personalProjects.map((project) => (
+								<article class:list={["project-card", `project-card--${project.tone}`]}>
+									<span class="project-card__icon" aria-hidden="true"><Icon is:inline name={project.icon} /></span>
+									<span class="project-card__body">
+										<strong>{project.title}</strong>
+										<span>{project.description}</span>
+										<span class="project-card__tags">
+											{project.tags.map((tag) => <em>{tag}</em>)}
+										</span>
 									</span>
-								</span>
-							</article>
-						))}
-					</div>
-				</section>
+								</article>
+							))}
+						</div>
+					</section>
+				)}
 
 				<section class="profile-panel card-base" aria-labelledby="pinned-title">
 					<header class="profile-section-heading">
@@ -369,7 +363,9 @@ const serverStats = [
 				<strong>如果你也在把想法变成东西，欢迎来坐坐。</strong>
 			</div>
 			<div class="profile-footer__links">
-				<a href="/friends/">认识友链 <Icon is:inline name="material-symbols:arrow-right-alt-rounded" aria-hidden="true" /></a>
+				{siteConfig.pages.friends && (
+					<a href="/friends/">认识友链 <Icon is:inline name="material-symbols:arrow-right-alt-rounded" aria-hidden="true" /></a>
+				)}
 				<a href="/moments/">看看朋友圈 <Icon is:inline name="material-symbols:arrow-right-alt-rounded" aria-hidden="true" /></a>
 			</div>
 		</footer>

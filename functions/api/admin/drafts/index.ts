@@ -1,46 +1,71 @@
-import type { PagesFunction } from "../_shared/types";
-import { requireAdminGetOrigin, requireAuth, requireCsrf, requireOrigin } from "../_shared/auth";
-import { getDraft, query, run } from "../_shared/db";
-import { json, randomToken } from "../_shared/security";
+import { audit, bestEffortAudit } from "../_shared/audit";
 import { readJson } from "../_shared/body";
+import { ApiError } from "../_shared/errors";
+import { adminGet, adminMutation } from "../_shared/handler";
+import { DraftRepository } from "../_shared/repositories/draft-repository";
+import { randomToken } from "../_shared/security";
+import { toDetail, toSummary } from "../_shared/services/content-service";
+import { parsePostFilters } from "../_shared/services/post-query";
 import { validateDraft } from "../_shared/validation";
 
 const DRAFT_BODY_LIMIT = 1024 * 1024;
-import { audit } from "../_shared/audit";
 
-export const onRequestGet: PagesFunction = async (context) => {
-	const denied = requireAdminGetOrigin(context.request, context.env);
-	if (denied) return denied;
-	const auth = await requireAuth(context);
-	if (auth.response) return auth.response;
-	try {
-		const result = await query(context.env.DB, "SELECT * FROM admin_drafts ORDER BY updated_at DESC");
-		return json({ drafts: result.results });
-	} catch {
-		return json({ error: "draft_list_failed" }, 500);
-	}
-};
+export const onRequestGet = adminGet(async (context) => {
+	const repository = new DraftRepository(context.env);
+	const filters = parsePostFilters(new URL(context.request.url));
+	const [rows, total] = await Promise.all([
+		repository.list(filters),
+		repository.count(filters),
+	]);
+	return {
+		items: rows.map(toSummary),
+		page: filters.page,
+		pageSize: filters.pageSize,
+		total,
+	};
+});
 
-export const onRequestPost: PagesFunction = async (context) => {
-	const denied = requireOrigin(context.request, context.env);
-	if (denied) return denied;
-	const auth = await requireAuth(context);
-	if (auth.response) return auth.response;
-	const csrf = await requireCsrf(context, auth.session);
-	if (csrf) return csrf;
+export const onRequestPost = adminMutation(async (context) => {
 	const parsed = await readJson(context.request, DRAFT_BODY_LIMIT);
-	if (parsed.response) return json({ error: "invalid_request" }, parsed.response.status);
-	const input = parsed.data;
-	const checked = validateDraft(input);
-	if (!checked.data) return json({ error: "validation_failed", fields: checked.errors }, 422);
-	try {
-		const draft = checked.data;
-		const id = randomToken(16);
-		const now = new Date().toISOString();
-		await run(context.env.DB, "INSERT INTO admin_drafts (id, slug, title, published, updated, description, ai_summary, image, tags_json, category, lang, pinned, author, source_link, license_name, license_url, comment, content, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", id, draft.slug, draft.title, draft.published, draft.updated ?? null, draft.description ?? "", draft.aiSummary ?? "", draft.image ?? "", JSON.stringify(draft.tags), draft.category ?? "", draft.lang ?? "", draft.pinned ? 1 : 0, draft.author ?? "", draft.sourceLink ?? "", draft.licenseName ?? "", draft.licenseUrl ?? "", draft.comment === false ? 0 : 1, draft.content, "draft", now, now);
-		await audit(context.env, auth.session.user_id, "draft_create", context.request, { id });
-		return json({ draft: await getDraft(context.env, id) }, 201);
-	} catch {
-		return json({ error: "draft_create_failed" }, 500);
-	}
-};
+	if (parsed.response)
+		throw new ApiError(
+			parsed.response.status,
+			parsed.response.status === 413 ? "payload_too_large" : "invalid_request",
+			"草稿请求无效",
+		);
+	const checked = validateDraft(parsed.data);
+	if (!checked.data)
+		throw new ApiError(
+			422,
+			"validation_failed",
+			"草稿校验失败",
+			false,
+			Object.fromEntries(checked.errors.map((error) => [error, error])),
+		);
+	const id = randomToken(16);
+	const contentId = randomToken(16);
+	const draft = await new DraftRepository(context.env).create(
+		id,
+		contentId,
+		checked.data,
+		new Date().toISOString(),
+	);
+	if (!draft)
+		throw new ApiError(500, "draft_create_failed", "草稿创建失败", true);
+	await bestEffortAudit(() =>
+		audit(
+			context.env,
+			context.session.user_id,
+			"draft_create",
+			context.request,
+			{
+				requestId: context.requestId,
+				resourceType: "draft",
+				resourceId: id,
+				result: "success",
+				metadata: { version: draft.version },
+			},
+		),
+	);
+	return { data: toDetail(draft), status: 201 };
+});

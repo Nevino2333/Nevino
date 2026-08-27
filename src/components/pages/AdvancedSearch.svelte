@@ -25,12 +25,12 @@ type Result = SearchResult & {
 	tags?: string[];
 	page?: boolean;
 };
-let keyword = "",
-	results: Result[] = [],
-	loading = false,
-	ready = false,
-	timer: NodeJS.Timeout,
-	cache: Post[] | null = null;
+let keyword = "";
+let results: Result[] = [];
+let loading = false;
+let ready = false;
+let timer: NodeJS.Timeout;
+let cache: Post[] | null = null;
 
 const esc = (v: string) =>
 	v.replace(
@@ -44,7 +44,7 @@ const hi = (v: string, q: string) => {
 	const w = q.trim();
 	if (!w) return esc(v);
 	const e = w.replace(/[.*+?^$()|[\]\\{}]/g, "\\$&");
-	return esc(v).replace(new RegExp(e, "gi"), (m) => "<mark>" + m + "</mark>");
+	return esc(v).replace(new RegExp(e, "gi"), (m) => `<mark>${m}</mark>`);
 };
 const clean = (v: string) => v.replace(/<[^>]*>/g, "");
 const norm = (v: string) => {

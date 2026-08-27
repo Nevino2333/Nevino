@@ -122,9 +122,9 @@ export function remarkWikiLink(options = {}) {
 			const parts = [];
 			const matcher = /\[\[([^[\]\n]+)\]\]/g;
 			let cursor = 0;
-			let match;
+			let match = matcher.exec(node.value);
 
-			while ((match = matcher.exec(node.value))) {
+			while (match) {
 				if (match.index > cursor) {
 					parts.push({
 						type: "text",
@@ -144,6 +144,7 @@ export function remarkWikiLink(options = {}) {
 				}
 
 				cursor = matcher.lastIndex;
+				match = matcher.exec(node.value);
 			}
 
 			if (cursor === 0) return;

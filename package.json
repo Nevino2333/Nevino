@@ -13,6 +13,7 @@
     "admin:dev": "wrangler pages dev ./dist --local --persist-to .wrangler/state --port 8788 --d1 DB=firefly-admin-local --binding SESSION_SECRET=local-session-secret-change-me --binding ADMIN_BOOTSTRAP_SECRET=local-bootstrap-secret-change-me --binding ALLOWED_ORIGIN=http://127.0.0.1:8788",
     "astro": "astro",
     "type-check": "tsc --noEmit --isolatedDeclarations",
+    "test:admin": "tsx --test tests/admin/*.test.ts",
     "new-post": "node scripts/new-post.js",
     "post-studio": "node scripts/post-studio.js",
     "format": "biome format --write ./src",
@@ -81,7 +82,8 @@
     "three": "^0.185.1",
     "typescript": "^5.9.2",
     "unist-util-visit": "^5.1.0",
-    "wrangler": "^4.102.0"
+    "wrangler": "^4.102.0",
+    "yaml": "^2.9.0"
   },
   "devDependencies": {
     "@astrojs/ts-plugin": "^1.10.9",

@@ -300,7 +300,7 @@ async function fetchText(
 				headers: {
 					Accept: accept,
 					"Cache-Control": "no-cache",
-					"User-Agent": "Rainzt-Moments/1.1 (+https://rainzt.cn/)",
+					"User-Agent": "Nevino-Moments/1.0 (+https://nevino-blog.pages.dev/)",
 				},
 			});
 			if (response.ok) {

@@ -11,8 +11,8 @@ export const siteConfig: SiteConfig = {
 	// 站点副标题
 	subtitle: "物物而不物于物，念念而不念于念",
 
-	// Aemeath 主题版本
-	themeVersion: "V1.1.1",
+	// 主题版本
+	themeVersion: "V1.0.0",
 
 	// 站点 URL
 	// 部署到 Cloudflare Pages 后，替换为你的 Pages 项目地址（如 https://nevino-blog.pages.dev）
@@ -104,7 +104,7 @@ export const siteConfig: SiteConfig = {
 	// 页面开关配置 - 控制特定页面的访问权限，设为false会返回404并自动隐藏对应的导航栏菜单项
 	pages: {
 		// 友链页面开关
-		friends: true,
+		friends: false,
 		// 打赏页面开关
 		sponsor: true,
 		// 留言板页面开关，需要配置评论系统

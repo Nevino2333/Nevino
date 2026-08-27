@@ -425,7 +425,7 @@ function getStoredIntroCharacterId() {
 		return homePortfolioIntroSettings.characters.some(
 			(character) => character.id === storedId,
 		)
-			? storedId!
+			? (storedId ?? defaultIntroCharacterId)
 			: defaultIntroCharacterId;
 	} catch {
 		return defaultIntroCharacterId;
@@ -441,7 +441,7 @@ function getStoredIntroBannerId(position: "top" | "bottom", defaultId: string) {
 	try {
 		const storedId = localStorage.getItem(storageKey);
 		return options.some((banner) => banner.id === storedId)
-			? storedId!
+			? (storedId ?? defaultId)
 			: defaultId;
 	} catch {
 		return defaultId;

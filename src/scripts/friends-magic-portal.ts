@@ -426,7 +426,9 @@ const createTunnel = (
 		let terminalFillPrepared = false;
 		const resetTerminalFill = () => {
 			if (!terminalFillPrepared) return;
-			segments.forEach((segment) => populate(segment));
+			segments.forEach((segment) => {
+				populate(segment);
+			});
 			terminalFillPrepared = false;
 		};
 		const setBoost = (active: boolean, startedAt = performance.now()) => {
@@ -512,7 +514,7 @@ const createTunnel = (
 					.flatMap((segment) => segment.userData.slabs as THREE.Mesh[])
 					.filter((slab) => !slab.visible || !slab.userData.portalImageRecord);
 				terminalFillTotal = candidates.length;
-				tailSegments.forEach((segment) => populate(segment, true));
+				tailSegments.forEach((segment) => void populate(segment, true));
 				const tailRecords = new Set<PortalImageRecord>();
 				tailSegments.forEach((segment) => {
 					(segment.userData.slabs as THREE.Mesh[]).forEach((slab) => {
@@ -646,7 +648,9 @@ const createTunnel = (
 				setBoost(false);
 				camera.zoom = 1;
 				camera.updateProjectionMatrix();
-				segments.forEach((segment) => segment.scale.set(1, 1, 1));
+				segments.forEach((segment) => {
+					segment.scale.set(1, 1, 1);
+				});
 				setCursor(false, false);
 			},
 			setBoost,
@@ -669,7 +673,9 @@ const createTunnel = (
 				wallGeometry.dispose();
 				lineGeometry.dispose();
 				lineMaterial.dispose();
-				slabMaterials.forEach((material) => material.dispose());
+				slabMaterials.forEach((material) => {
+					material.dispose();
+				});
 				imageRecords.forEach((record) => {
 					record.texture?.dispose();
 					record.materials.clear();

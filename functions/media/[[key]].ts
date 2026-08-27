@@ -10,7 +10,16 @@ const CONTENT_TYPES: Record<string, string> = {
 const KEY_PATTERN = /^[A-Za-z0-9_-]{22}\.(png|jpg|webp|gif)$/;
 
 const errorResponse = (error: string, status: number): Response =>
-	Response.json({ error }, { status, headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });
+	Response.json(
+		{ error },
+		{
+			status,
+			headers: {
+				"Cache-Control": "no-store",
+				"X-Content-Type-Options": "nosniff",
+			},
+		},
+	);
 
 export const onRequestGet: PagesFunction = async (context) => {
 	if (!context.env.MEDIA_BUCKET) return errorResponse("media_unavailable", 503);

@@ -1,22 +1,36 @@
-import type { PagesFunction } from "./_shared/types";
-import { login, requireOrigin } from "./_shared/auth";
+import { login } from "./_shared/auth";
 import { readJson } from "./_shared/body";
-import { json } from "./_shared/security";
+import { ApiError } from "./_shared/errors";
+import { publicAdminMutation } from "./_shared/handler";
 
 const LOGIN_BODY_LIMIT = 1024;
 
-export const onRequestPost: PagesFunction = async (context) => {
-	const denied = requireOrigin(context.request, context.env);
-	if (denied) return denied;
+export const onRequestPost = publicAdminMutation(async (context) => {
 	const parsed = await readJson(context.request, LOGIN_BODY_LIMIT);
-	if (parsed.response) return parsed.response;
-	if (!parsed.data || typeof parsed.data !== "object" || Array.isArray(parsed.data)) return json({ error: "invalid_credentials" }, 401);
+	if (parsed.response)
+		throw new ApiError(
+			parsed.response.status,
+			parsed.response.status === 413 ? "payload_too_large" : "invalid_request",
+			"登录请求无效",
+		);
+	if (
+		!parsed.data ||
+		typeof parsed.data !== "object" ||
+		Array.isArray(parsed.data)
+	)
+		throw new ApiError(401, "invalid_credentials", "用户名或密码错误");
 	const input = parsed.data as Record<string, unknown>;
-	const username = typeof input.username === "string" && input.username.length <= 64 ? input.username : "";
-	const password = typeof input.password === "string" && input.password.length <= 256 ? input.password : "";
-	try {
-		return await login(context, username, password);
-	} catch {
-		return json({ error: "login_failed" }, 500);
-	}
-};
+	const username =
+		typeof input.username === "string" && input.username.length <= 64
+			? input.username
+			: "";
+	const password =
+		typeof input.password === "string" && input.password.length <= 256
+			? input.password
+			: "";
+	const result = await login(context, username, password, context.requestId);
+	return {
+		data: { authenticated: true },
+		headers: { "Set-Cookie": result.cookie },
+	};
+});

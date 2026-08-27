@@ -13,20 +13,20 @@ export const analyticsConfig: AnalyticsConfig = {
 		scriptUrl: "https://cloud.umami.is/script.js",
 		// 在 Umami 后台创建公开分享链接后填写。仅用于读取公开统计，不要填写管理员 Token。
 		// Umami Cloud 公开分享链接的 slug，仅供前端读取公开统计。
-		shareId: "T1uusJRzfxbuxBLK",
+		shareId: "",
 		// Umami Cloud 使用 https://cloud.umami.is；自建 Umami 则改成你的实例地址。
 		shareApiBase: "https://cloud.umami.is/analytics/us",
 		// 迁移前的历史累计仅合并展示在站点统计卡片中，不会写入 Umami。
 		historicalStats: {
-			visitors: 590,
-			pageviews: 921,
+			visitors: 0,
+			pageviews: 0,
 		},
 		// 文章页保留 Waline 的历史阅读量；Umami 继续负责全站流量与仪表盘统计。
 		showPageViews: false,
 		// 在“站点统计”卡片中显示累计访客与总浏览量。
 		showSiteStats: true,
 		// Umami 会话回放脚本地址，支持使用自建
-		replaysScriptUrl: "https://umami.rainzt.cn/recorder.js",
+		replaysScriptUrl: "",
 		// 是否追踪出站链接
 		trackOutboundLinks: true,
 		// 是否收集浏览器性能指标
