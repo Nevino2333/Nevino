@@ -5,8 +5,8 @@
 	"pages_build_output_dir": "./dist",
 	"d1_databases": [{
 		"binding": "DB",
-		"database_name": "firefly-admin-local",
-		"database_id": "firefly-admin-local",
+		"database_name": "nevino-admin",
+		"database_id": "c840036c-40d0-4627-8671-e58024814a71",
 		"migrations_dir": "./migrations"
 	}],
 	"r2_buckets": [{
