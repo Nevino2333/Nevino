@@ -1,0 +1,69 @@
+---
+import { analyticsConfig } from "@/config/analyticsConfig";
+
+// Umami 已配置时由 UmamiMetrics 负责填数，此处仅负责基于 D1 的计数与填数
+const umamiEnabled = Boolean(
+	analyticsConfig.umamiAnalytics?.websiteId &&
+		analyticsConfig.umamiAnalytics?.shareId,
+);
+---
+
+<script is:inline data-swup-ignore-script define:vars={{ umamiEnabled }}>
+(() => {
+	if (umamiEnabled || window.__nvVisitStats) return;
+	const STORAGE_KEY = "nv-visitor-id";
+	let visitor = "";
+	try {
+		visitor = localStorage.getItem(STORAGE_KEY) || "";
+		if (!visitor) {
+			visitor = crypto.randomUUID().replaceAll("-", "");
+			localStorage.setItem(STORAGE_KEY, visitor);
+		}
+	} catch {
+		visitor = "anon" + Math.random().toString(36).slice(2, 12);
+	}
+
+	const formatNumber = (value) =>
+		new Intl.NumberFormat("zh-CN").format(Number(value) || 0);
+
+	const fill = (data) => {
+		if (!data || !data.available) return;
+		const map = {
+			todayVisitors: data.todayVisitors,
+			todayPageviews: data.todayPageviews,
+			visitors: data.visitors,
+			pageviews: data.pageviews,
+		};
+		for (const [key, value] of Object.entries(map)) {
+			document
+				.querySelectorAll(`[data-umami-stat="${key}"]`)
+				.forEach((element) => {
+					element.textContent = formatNumber(value);
+				});
+		}
+	};
+
+	const lastPath = { value: window.location.pathname };
+	const count = async () => {
+		lastPath.value = window.location.pathname;
+		try {
+			const response = await fetch("/api/stats/visit", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ visitor }),
+			});
+			const body = await response.json().catch(() => null);
+			fill(body?.data);
+		} catch {
+			// 统计失败不影响正常阅读
+		}
+	};
+
+	count();
+	document.addEventListener("swup:page:view", () => {
+		if (window.location.pathname === lastPath.value) return;
+		count();
+	});
+	window.__nvVisitStats = true;
+})();
+</script>

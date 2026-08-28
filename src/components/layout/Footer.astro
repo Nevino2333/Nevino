@@ -2,17 +2,9 @@
 import { Icon } from "astro-icon/components";
 import animalsImage from "@/assets/images/footer-animals.webp";
 import { profileConfig, siteConfig } from "@/config";
-import { analyticsConfig } from "@/config/analyticsConfig";
 import { url } from "@/utils/url-utils";
 
 import "@/styles/footer.css";
-
-// 仅在 Umami 统计完整配置后才渲染访客统计，避免出现永远“加载中”的占位
-const showTrafficStats = Boolean(
-	analyticsConfig.umamiAnalytics?.websiteId &&
-		analyticsConfig.umamiAnalytics?.shareId &&
-		analyticsConfig.umamiAnalytics?.shareApiBase,
-);
 
 const currentYear = new Date().getFullYear();
 const startAt = new Date(`${siteConfig.siteStartDate}T00:00:00+08:00`);
@@ -173,7 +165,6 @@ const techStack = [
 				</a>
 			</div>
 
-			{showTrafficStats && (
 			<div class="site-footer__traffic" aria-label="网站访问统计">
 				<span class="site-footer__traffic-item">
 					<span>今日访客：</span>
@@ -195,7 +186,6 @@ const techStack = [
 					<strong data-umami-stat="pageviews" aria-live="polite">--</strong>
 				</span>
 			</div>
-		)}
 
 			<div class="site-footer__divider" aria-hidden="true">
 				<span></span>

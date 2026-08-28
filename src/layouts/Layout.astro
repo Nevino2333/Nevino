@@ -4,6 +4,7 @@ import La51Analytics from "@components/analytics/La51Analytics.astro";
 import MicrosoftClarity from "@components/analytics/MicrosoftClarity.astro";
 import UmamiAnalytics from "@components/analytics/UmamiAnalytics.astro";
 import UmamiMetrics from "@components/analytics/UmamiMetrics.astro";
+import VisitStats from "@components/analytics/VisitStats.astro";
 import ChangelogManager from "@components/features/ChangelogManager.astro";
 import FancyboxManager from "@components/features/FancyboxManager.astro";
 import FontSetup from "@components/features/FontSetup.astro";
@@ -139,6 +140,7 @@ const siteLang = lang.replace("_", "-");
             screenRecord={analyticsConfig.la51Analytics?.screenRecord}
             />
     )}
+    <VisitStats />
 
     <title>{pageTitle}</title>
     <!-- 欢迎提示会请求 IP 归属地 API，提前建立连接减少首屏后的等待 -->

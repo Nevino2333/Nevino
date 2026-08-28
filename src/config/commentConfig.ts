@@ -2,8 +2,8 @@ import type { CommentConfig } from "../types/commentConfig";
 
 export const commentConfig: CommentConfig = {
 	// 评论系统类型: none, twikoo, waline, giscus, disqus, artalk，默认为none，即不启用评论系统
-	// 部署后配置好你自己的评论服务（如 Waline/Vercel）再启用
-	type: "none",
+	// 已启用 Giscus（基于 GitHub Discussions，零服务器依赖）
+	type: "giscus",
 
 	//twikoo评论系统配置
 	twikoo: {
@@ -57,13 +57,13 @@ export const commentConfig: CommentConfig = {
 	//giscus评论系统配置
 	giscus: {
 		// 设置 Giscus 评论系统仓库（部署后替换为你自己的仓库）
-		repo: "",
+		repo: "Nevino2333/Nevino",
 		// 设置 Giscus 评论系统仓库ID
-		repoId: "",
+		repoId: "R_kgDOUGWwWQ",
 		// 设置 Giscus 评论系统分类
-		category: "General",
-		// 获取 Giscus 评论系统分类ID
-		categoryId: "",
+		category: "Announcements",
+		// 获取 Giscus 评论系统分类ID（Announcements：访客仅可评论，防止随意开新讨论）
+		categoryId: "DIC_kwDOUGWwWc4DEYLr",
 		// 获取 Giscus 评论系统映射方式
 		mapping: "title",
 		// 获取 Giscus 评论系统严格模式
