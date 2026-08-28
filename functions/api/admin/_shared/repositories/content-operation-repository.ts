@@ -56,9 +56,11 @@ export class ContentOperationRepository {
 		);
 	}
 	async createPending(row: ContentOperationRow) {
+		// 注意：占位符数量必须与 columns 一致（19 列），此前多写了一个导致
+		// 所有内容操作（撤回/重命名/删除/导入）插入失败并被误报为活动操作冲突。
 		await run(
 			this.env.DB,
-			`INSERT INTO admin_content_operations (${columns.replaceAll(", ", ", ")}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			`INSERT INTO admin_content_operations (${columns}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			row.id,
 			row.idempotency_key,
 			row.type,

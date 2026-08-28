@@ -214,14 +214,26 @@ export class PublishTaskRepository {
 	): Promise<DeploymentCompletionResult> {
 		const errorCode =
 			status === "build_failed" ? "deployment_build_failed" : null;
+		// 部署路径与 blob SHA 必须回写到草稿，否则撤回/重命名/删除会被
+		// “仅可撤回已部署且同步的文章”状态检查永久阻塞。
+		const task = await this.get(id);
 		const taskStatement = this.env.DB.prepare(
 			"UPDATE admin_publish_tasks SET status = ?, error_code = ?, error_detail = ?, updated_at = ?, completed_at = ? WHERE id = ? AND status = 'awaiting_deploy' AND github_commit_sha = ?",
 		).bind(status, errorCode, errorCode, now, now, id, commitSha);
 		const draftStatement =
 			status === "published"
 				? this.env.DB.prepare(
-						"UPDATE admin_drafts SET status = 'published', publication_state = 'published', workspace_state = 'clean', sync_status = 'published', deployed_commit_sha = commit_sha, deployed_at = ?, updated_at = ? WHERE id = (SELECT draft_id FROM admin_publish_tasks WHERE id = ? AND status = 'published' AND github_commit_sha = ?) AND version = ? AND commit_sha = ? AND sync_status = 'publishing'",
-					).bind(now, now, id, commitSha, expectedVersion + 1, commitSha)
+						"UPDATE admin_drafts SET status = 'published', publication_state = 'published', workspace_state = 'clean', sync_status = 'published', deployed_path = ?, deployed_blob_sha = ?, deployed_commit_sha = commit_sha, deployed_at = ?, updated_at = ? WHERE id = (SELECT draft_id FROM admin_publish_tasks WHERE id = ? AND status = 'published' AND github_commit_sha = ?) AND version = ? AND commit_sha = ? AND sync_status = 'publishing'",
+					).bind(
+						task?.target_path ?? null,
+						task?.github_blob_sha ?? null,
+						now,
+						now,
+						id,
+						commitSha,
+						expectedVersion + 1,
+						commitSha,
+					)
 				: this.env.DB.prepare(
 						"UPDATE admin_drafts SET status = 'published', publication_state = 'published', workspace_state = 'modified', sync_status = 'modified', updated_at = ? WHERE id = (SELECT draft_id FROM admin_publish_tasks WHERE id = ? AND status = 'build_failed' AND github_commit_sha = ?) AND version = ? AND commit_sha = ? AND sync_status = 'publishing'",
 					).bind(now, id, commitSha, expectedVersion + 1, commitSha);
