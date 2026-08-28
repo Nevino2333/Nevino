@@ -10,39 +10,44 @@ const lightTheme = "light";
 const darkTheme = "dark";
 ---
 
-<script is:inline type="module" src="https://esm.sh/giscus"></script>
-
-<!-- 
-  Giscus 官方Web Component用法，兼容Astro静态输出，无需import包，无需NPM依赖！
-  参考：https://giscus.app/ 详情配置说明
+<!--
+  Giscus 官方 client.js 嵌入方式（来自 giscus.app 本身）。
+  主题原先经 esm.sh 加载 Web Component，但 esm.sh 不在站点 CSP 白名单内，
+  且国内访问不稳定，会导致评论区持续空白，故改用官方脚本嵌入。
 -->
-<giscus-widget
-  id="comments"
-  repo={giscus.repo}
-  repoId={giscus.repoId}
-  category={giscus.category}
-  categoryId={giscus.categoryId}
-  mapping={giscus.mapping}
-  strict={giscus.strict}
-  reactionsEnabled={giscus.reactionsEnabled}
-  emitMetadata={giscus.emitMetadata}
-  inputPosition={giscus.inputPosition}
-  theme={lightTheme}
-  lang={giscus.lang}
-  loading={giscus.loading}
-/>
+<script
+  is:inline
+  src="https://giscus.app/client.js"
+  data-repo={giscus.repo}
+  data-repo-id={giscus.repoId}
+  data-category={giscus.category}
+  data-category-id={giscus.categoryId}
+  data-mapping={giscus.mapping}
+  data-strict={giscus.strict}
+  data-reactions-enabled={giscus.reactionsEnabled}
+  data-emit-metadata={giscus.emitMetadata}
+  data-input-position={giscus.inputPosition}
+  data-theme={lightTheme}
+  data-lang={giscus.lang}
+  data-loading={giscus.loading}
+  crossorigin="anonymous"
+  async
+></script>
 
 <script is:inline define:vars={{ lightTheme, darkTheme }}>
   function updateGiscusTheme() {
     const isDark = document.documentElement.classList.contains('dark');
     const theme = isDark ? darkTheme : lightTheme;
-    const widget = document.querySelector('giscus-widget');
-    if (widget) {
-      widget.setAttribute('theme', theme);
+    const iframe = document.querySelector('iframe.giscus-frame');
+    if (iframe && iframe.contentWindow) {
+      iframe.contentWindow.postMessage(
+        { giscus: { setConfig: { theme } } },
+        'https://giscus.app',
+      );
     }
   }
 
-  // Initial update
+  // Initial update (iframe may not exist yet; giscus reads the initial data-theme)
   updateGiscusTheme();
 
   // Clean up previous observer if exists
