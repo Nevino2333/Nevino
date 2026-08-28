@@ -86,6 +86,8 @@ const repositoryUrl = (config: GitHubConfig, path: string): URL =>
 const headers = (config: GitHubConfig, body = false): HeadersInit => ({
 	Accept: "application/vnd.github+json",
 	Authorization: `Bearer ${config.token}`,
+	// GitHub API 强制要求 User-Agent；Workers 的 fetch 默认不携带，缺失会被 403 拒绝
+	"User-Agent": "Nevino-Blog-Admin/1.0 (+https://nevino2333.pages.dev)",
 	"X-GitHub-Api-Version": "2022-11-28",
 	...(body ? { "Content-Type": "application/json" } : {}),
 });

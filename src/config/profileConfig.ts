@@ -22,12 +22,6 @@ export const profileConfig: ProfileConfig = {
 	// showName: true 时显示图标和名称，false 时只显示图标
 	links: [
 		{
-			name: "GitHub",
-			icon: "fa7-brands:github",
-			url: "https://github.com/Nevino2333",
-			showName: false,
-		},
-		{
 			name: "Bilibili",
 			icon: "simple-icons:bilibili",
 			url: "https://b23.tv/qUsPw7x",
@@ -49,12 +43,6 @@ export const profileConfig: ProfileConfig = {
 			name: "微信",
 			icon: "fa7-brands:weixin",
 			url: "copy:WJH231582",
-			showName: false,
-		},
-		{
-			name: "爱发电",
-			icon: "simple-icons:afdian",
-			url: "https://ifdian.net/a/Nevino",
 			showName: false,
 		},
 	],

@@ -146,38 +146,38 @@ const {
 		}
 
 		function renderSiteStats(stats, todayStats) {
-			document.querySelectorAll('[data-umami-stat="todayVisitors"]').forEach((element) => {
-				element.textContent = todayStats ? formatNumber(todayStats.visitors) : "加载中";
-			});
-			document.querySelectorAll('[data-umami-stat="todayPageviews"]').forEach((element) => {
-				element.textContent = todayStats ? formatNumber(todayStats.pageviews) : "加载中";
-			});
-			document.querySelectorAll('[data-umami-stat="visitors"]').forEach((element) => {
-				element.textContent = stats
-					? formatNumber((Number(stats.visitors) || 0) + historicalVisitorCount)
-					: "加载中";
-			});
-			document.querySelectorAll('[data-umami-stat="pageviews"]').forEach((element) => {
-				element.textContent = stats
-					? formatNumber((Number(stats.pageviews) || 0) + historicalPageviewCount)
-					: "加载中";
-			});
-		}
+		document.querySelectorAll('[data-umami-stat="todayVisitors"]').forEach((element) => {
+			element.textContent = todayStats ? formatNumber(todayStats.visitors) : "--";
+		});
+		document.querySelectorAll('[data-umami-stat="todayPageviews"]').forEach((element) => {
+			element.textContent = todayStats ? formatNumber(todayStats.pageviews) : "--";
+		});
+		document.querySelectorAll('[data-umami-stat="visitors"]').forEach((element) => {
+			element.textContent = stats
+				? formatNumber((Number(stats.visitors) || 0) + historicalVisitorCount)
+				: "--";
+		});
+		document.querySelectorAll('[data-umami-stat="pageviews"]').forEach((element) => {
+			element.textContent = stats
+				? formatNumber((Number(stats.pageviews) || 0) + historicalPageviewCount)
+				: "--";
+		});
+	}
 
-		function markUnavailable() {
-			document.querySelectorAll("[data-umami-pageviews]").forEach((element) => {
-				element.textContent = "加载中";
-			});
-			document.querySelectorAll('[data-umami-stat="visitors"]').forEach((element) => {
-				element.textContent = "加载中";
-			});
-			document.querySelectorAll('[data-umami-stat="pageviews"]').forEach((element) => {
-				element.textContent = "加载中";
-			});
-			document.querySelectorAll('[data-umami-stat="todayVisitors"], [data-umami-stat="todayPageviews"]').forEach((element) => {
-				element.textContent = "加载中";
-			});
-		}
+	function markUnavailable() {
+		document.querySelectorAll("[data-umami-pageviews]").forEach((element) => {
+			element.textContent = "--";
+		});
+		document.querySelectorAll('[data-umami-stat="visitors"]').forEach((element) => {
+			element.textContent = "--";
+		});
+		document.querySelectorAll('[data-umami-stat="pageviews"]').forEach((element) => {
+			element.textContent = "--";
+		});
+		document.querySelectorAll('[data-umami-stat="todayVisitors"], [data-umami-stat="todayPageviews"]').forEach((element) => {
+			element.textContent = "--";
+		});
+	}
 
 		async function refresh(forceRefresh = false) {
 			const needsViews = Boolean(document.querySelector("[data-umami-pageviews]"));
@@ -206,7 +206,7 @@ const {
 				if (needsStats) renderSiteStats(stats, todayStats);
 				if (!metrics && needsViews) {
 					document.querySelectorAll("[data-umami-pageviews]").forEach((element) => {
-						element.textContent = "加载中";
+						element.textContent = "--";
 					});
 				}
 			} catch {

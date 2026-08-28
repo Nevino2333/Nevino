@@ -13,62 +13,8 @@ type Tool = {
 	isMine?: boolean;
 };
 
-const myTools: Tool[] = [
-	{
-		name: "SKU 销量查询工作台",
-		description:
-			"填写热门变种序号图后，可一键查询其他变种图序号下全部品牌的销量情况，并精确到具体 SKU。",
-		icon: "material-symbols:query-stats-rounded",
-		platforms: ["Windows", "SKU 分析"],
-		url: "https://wwbna.lanzouv.com/b01d73r3de",
-		isFree: false,
-		accent: "#8b5cf6",
-		isMine: true,
-	},
-	{
-		name: "BigSeller 表格转 TikTok",
-		description:
-			"批量将 BigSeller 表格一键转换为 TikTok Shop 上架表格，减少重复整理和字段映射操作。",
-		icon: "material-symbols:swap-horiz-rounded",
-		platforms: ["Windows", "BigSeller", "TikTok Shop"],
-		url: "https://wwbna.lanzouv.com/b01d73qybc",
-		isFree: false,
-		accent: "#06b6d4",
-		isMine: true,
-	},
-	{
-		name: "批量图案替换工具",
-		description:
-			"制作完模板表格后，可通过图库一键制作，支持图库模式和子文件夹模式，适配自动上架项目。",
-		icon: "material-symbols:grid-view-rounded",
-		platforms: ["Windows"],
-		url: "https://wwbna.lanzouv.com/b01d72k9mb",
-		isFree: false,
-		accent: "#0ea5e9",
-		isMine: true,
-	},
-	{
-		name: "图片批量提取工具",
-		description:
-			"带 3 个适用的 PS JS 脚本，可把 PSD 套好的图片一键提取成适用于自动上架项目的素材。",
-		icon: "material-symbols:image-search-rounded",
-		platforms: ["Windows", "Photoshop"],
-		url: "https://wwbna.lanzouv.com/b01d72ka5a",
-		isFree: false,
-		accent: "#22c55e",
-		isMine: true,
-	},
-	{
-		name: "批量修改 Shopee 库存",
-		description: "根据 SKU 自动修改表格内库存，适合批量维护 Shopee 商品库存。",
-		icon: "material-symbols:inventory-2-rounded",
-		platforms: ["Windows", "Shopee"],
-		url: "https://wwbna.lanzouv.com/b01d72kaje",
-		isFree: false,
-		accent: "#f97316",
-		isMine: true,
-	},
-];
+// 本人项目清单：部署给 Nevino 后暂无自有工具，保留结构便于后续添加
+const myTools: Tool[] = [];
 
 const thirdPartyTools: Tool[] = [
 	{
@@ -192,16 +138,24 @@ const thirdPartyTools: Tool[] = [
 ];
 
 const toolSections = [
-	{
-		title: "本人项目",
-		description: "我自己整理和制作的跨境电商效率工具。",
-		tools: myTools,
-	},
-	{
-		title: "非本人项目",
-		description: "收藏备用的第三方工具。",
-		tools: thirdPartyTools,
-	},
+	...(myTools.length > 0
+		? [
+				{
+					title: "本人项目",
+					description: "我自己整理和制作的效率工具。",
+					tools: myTools,
+				},
+			]
+		: []),
+	...(thirdPartyTools.length > 0
+		? [
+				{
+					title: "非本人项目",
+					description: "收藏备用的第三方工具。",
+					tools: thirdPartyTools,
+				},
+			]
+		: []),
 ];
 
 const tools = [...myTools, ...thirdPartyTools];
@@ -237,14 +191,18 @@ const getPlatformIcon = (platform: string) => {
 					<strong>{tools.length}</strong>
 					<span>工具</span>
 				</div>
-				<div>
-					<strong>{myTools.length}</strong>
-					<span>本人项目</span>
-				</div>
-				<div>
-					<strong>{thirdPartyTools.length}</strong>
-					<span>非本人</span>
-				</div>
+				{myTools.length > 0 && (
+					<div>
+						<strong>{myTools.length}</strong>
+						<span>本人项目</span>
+					</div>
+				)}
+				{thirdPartyTools.length > 0 && (
+					<div>
+						<strong>{thirdPartyTools.length}</strong>
+						<span>非本人</span>
+					</div>
+				)}
 			</div>
 		</header>
 

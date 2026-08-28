@@ -45,3 +45,28 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy dist --project-name=nevino2333 --branch=master
+
+      - name: Notify admin deployment callback
+        if: ${{ always() }}
+        env:
+          CALLBACK_URL: ${{ secrets.DEPLOYMENT_CALLBACK_URL }}
+          CALLBACK_SECRET: ${{ secrets.DEPLOYMENT_CALLBACK_SECRET }}
+          COMMIT_SHA: ${{ github.sha }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          case "$JOB_STATUS" in
+            success) OUTCOME="success" ;;
+            *) OUTCOME="failure" ;;
+          esac
+          HTTP_CODE=$(curl --silent --show-error --max-time 30 \
+            -o /tmp/callback-body.txt -w "%{http_code}" \
+            -X POST "$CALLBACK_URL" \
+            -H "Content-Type: application/json" \
+            -H "X-Deployment-Callback-Secret: $CALLBACK_SECRET" \
+            --data "{\"commitSha\":\"$COMMIT_SHA\",\"outcome\":\"$OUTCOME\"}")
+          echo "callback status: $HTTP_CODE body: $(cat /tmp/callback-body.txt)"
+          # 404 表示本次部署没有等待回调的发布任务（普通内容推送），视为正常
+          if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "404" ]; then
+            exit 0
+          fi
+          exit 1

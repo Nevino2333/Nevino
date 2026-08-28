@@ -104,6 +104,7 @@ const managerConfigStr = JSON.stringify({
 
     // ── State ────────────────────────────────────────────────
     var loadVersion = 0; // incremented on each loadTrack to discard stale play() results
+    var lyricsLoadedFor = -1; // 已加载歌词的曲目索引，歌词延迟到首次播放才请求
     var state = {
         playlist: [],
         currentIndex: 0,
@@ -221,7 +222,11 @@ const managerConfigStr = JSON.stringify({
 
         audio.src = track.url;
 
-        loadLyrics(track);
+        // 歌词延迟加载：仅在真正开始播放时才请求 .lrc，避免每次打开页面都产生请求
+        if (autoPlay && lyricsLoadedFor !== index) {
+            lyricsLoadedFor = index;
+            loadLyrics(track);
+        }
 
         emit('fm:track', { index: index, track: track, autoPlay: !!autoPlay });
 
@@ -260,6 +265,11 @@ const managerConfigStr = JSON.stringify({
 
         if (audio.paused) {
             var ver = ++loadVersion;
+            var currentTrack = state.playlist[state.currentIndex];
+            if (currentTrack && lyricsLoadedFor !== state.currentIndex) {
+                lyricsLoadedFor = state.currentIndex;
+                loadLyrics(currentTrack);
+            }
             setLoading(true);
             audio.play().then(function () {
                 if (ver !== loadVersion) return;

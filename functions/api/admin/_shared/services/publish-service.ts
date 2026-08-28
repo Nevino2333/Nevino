@@ -284,10 +284,12 @@ export class PublishService {
 		if (!(await this.dependencies.tasks.claim(task.id, this.now())))
 			return this.getTask(task.id);
 		let result: { blobSha: string; commitSha: string };
+		let conflictMarked = false;
 		try {
 			const remote = await this.dependencies.github.getFile(path);
 			const target = decidePublishTarget(draft.github_sha, remote?.sha ?? null);
 			if (target.mode === "conflict") {
+				conflictMarked = true;
 				await this.dependencies.tasks.markFailed(
 					task.id,
 					"publishing",
@@ -311,18 +313,26 @@ export class PublishService {
 							`Publish ${draft.slug}`,
 						);
 		} catch (cause) {
-			if (cause instanceof ApiError) throw cause;
+			// 除已标记的内容冲突外，任何 GitHub 调用失败都必须终结任务，
+			// 否则任务会永久卡在 publishing，阻塞该草稿的后续发布。
 			const code =
-				cause instanceof Error && cause.message === "github_conflict"
-					? "github_conflict"
-					: "github_write_failed";
-			await this.dependencies.tasks.markFailed(
-				task.id,
-				"publishing",
-				"submit_failed",
-				code,
-				this.now(),
-			);
+				cause instanceof ApiError
+					? cause.code
+					: cause instanceof Error && cause.message === "github_conflict"
+						? "github_conflict"
+						: "github_write_failed";
+			if (!conflictMarked) {
+				await this.dependencies.tasks
+					.markFailed(
+						task.id,
+						"publishing",
+						"submit_failed",
+						code,
+						this.now(),
+					)
+					.catch(() => {});
+			}
+			if (cause instanceof ApiError) throw cause;
 			throw new ApiError(
 				code === "github_conflict" ? 409 : 502,
 				code,

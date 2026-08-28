@@ -93,6 +93,9 @@ const stack = [
 const serverStatusEndpoint = import.meta.env.DEV
 	? "/api/server-status.json"
 	: "/api/server-status.php";
+// Cloudflare Pages 为无服务器环境，没有可监控的 PHP/VPS 主机；
+// 部署到自有服务器并恢复 /api/server-status.php 后改回 true 即可。
+const serverStatusEnabled = false;
 const serverStats = [
 	{
 		key: "cpu",
@@ -321,6 +324,7 @@ const serverStats = [
 					</div>
 				</section>
 
+				{serverStatusEnabled && (
 				<section class="profile-panel profile-side-panel profile-server-panel card-base" aria-labelledby="server-title" data-server-metrics data-server-endpoint={serverStatusEndpoint}>
 					<header class="profile-side-heading profile-server-heading">
 						<Icon is:inline name="material-symbols:cloud-outline" aria-hidden="true" />
@@ -342,6 +346,7 @@ const serverStats = [
 					</div>
 					<p class="profile-side-note server-note" data-server-note>实时刷新 · 每 1 秒更新一次</p>
 				</section>
+			)}
 			</aside>
 		</div>
 
