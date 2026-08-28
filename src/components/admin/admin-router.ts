@@ -32,13 +32,30 @@ export function formatAdminUrl(route: AdminRoute): string {
 	return `/admin/?${search.toString()}`;
 }
 
+function toPlainRoute(route: AdminRoute): AdminRoute {
+	return {
+		view: route.view,
+		resourceId: route.resourceId,
+		postFilters: {
+			query: route.postFilters.query,
+			publicationState: route.postFilters.publicationState,
+			workspaceState: route.postFilters.workspaceState,
+			syncStatus: route.postFilters.syncStatus,
+			tag: route.postFilters.tag,
+			category: route.postFilters.category,
+			page: route.postFilters.page,
+		},
+	};
+}
+
 export function pushAdminRoute(route: AdminRoute): void {
-	window.history.pushState(route, "", formatAdminUrl(route));
-	window.dispatchEvent(new PopStateEvent("popstate", { state: route }));
+	const snapshot = toPlainRoute(route);
+	window.history.pushState(snapshot, "", formatAdminUrl(route));
+	window.dispatchEvent(new PopStateEvent("popstate", { state: snapshot }));
 }
 
 export function replaceAdminRoute(route: AdminRoute): void {
-	window.history.replaceState(route, "", formatAdminUrl(route));
+	window.history.replaceState(toPlainRoute(route), "", formatAdminUrl(route));
 }
 
 export function subscribeAdminRoute(

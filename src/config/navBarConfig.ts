@@ -39,9 +39,6 @@ const getDynamicNavBarConfig = (): NavBarConfig => {
 	// 友链
 	links.push(LinkPresets.Friends);
 
-	// 朋友圈
-	links.push(LinkPresets.Moments);
-
 	// 留言板
 	links.push(LinkPresets.Guestbook);
 

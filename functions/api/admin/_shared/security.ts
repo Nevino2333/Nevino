@@ -1,5 +1,5 @@
 const encoder = new TextEncoder();
-const PASSWORD_ITERATIONS = 210000;
+const PASSWORD_ITERATIONS = 100000;
 const MAX_PASSWORD_BYTES = 1024;
 
 export const bytesToBase64Url = (bytes: Uint8Array): string =>

@@ -21,7 +21,7 @@ const changelogEntries = [
 	{
 		title: "博客视觉与友链体验",
 		description:
-			"把友链、朋友圈、开屏动画和评论区的视觉连接重新梳理成一套更完整的体验。",
+			"把友链、开屏动画和评论区的视觉连接重新梳理成一套更完整的体验。",
 		href: "/changelog/",
 		tags: ["Nevino V1.0.0", "UI"],
 		tone: "blue",
@@ -35,14 +35,6 @@ const changelogEntries = [
 		tags: ["Nevino V1.0.0", "维护"],
 		tone: "mint",
 		icon: "material-symbols:history-rounded",
-	},
-	{
-		title: "朋友圈 RSS 聚合",
-		description: "把友链博客最近写下的文章收进一条持续发生的时间线。",
-		href: "/moments/",
-		tags: ["Nevino V1.0.0", "RSS"],
-		tone: "gold",
-		icon: "material-symbols:rss-feed-rounded",
 	},
 	{
 		title: "正在持续记录",
@@ -200,10 +192,6 @@ const serverStats = [
 					<em>{friendCount}</em>
 				</a>
 			)}
-			<a class="profile-tab" href="/moments/">
-				<Icon is:inline name="material-symbols:rss-feed-rounded" aria-hidden="true" />
-				<span>朋友圈</span>
-			</a>
 		</nav>
 
 		<div class="profile-layout">
@@ -363,11 +351,10 @@ const serverStats = [
 				<strong>如果你也在把想法变成东西，欢迎来坐坐。</strong>
 			</div>
 			<div class="profile-footer__links">
-				{siteConfig.pages.friends && (
-					<a href="/friends/">认识友链 <Icon is:inline name="material-symbols:arrow-right-alt-rounded" aria-hidden="true" /></a>
-				)}
-				<a href="/moments/">看看朋友圈 <Icon is:inline name="material-symbols:arrow-right-alt-rounded" aria-hidden="true" /></a>
-			</div>
+			{siteConfig.pages.friends && (
+				<a href="/friends/">认识友链 <Icon is:inline name="material-symbols:arrow-right-alt-rounded" aria-hidden="true" /></a>
+			)}
+		</div>
 		</footer>
 	</section>
 </MainGridLayout>

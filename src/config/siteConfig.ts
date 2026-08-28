@@ -17,7 +17,7 @@ export const siteConfig: SiteConfig = {
 	// 站点 URL
 	// 部署到 Cloudflare Pages 后，替换为你的 Pages 项目地址（如 https://nevino-blog.pages.dev）
 	// 若绑定了自定义域名，也请一并替换。
-	site_url: "https://nevino-blog.pages.dev",
+	site_url: "https://nevino2333.pages.dev",
 
 	// 站点描述
 	description:
