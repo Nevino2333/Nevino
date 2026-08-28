@@ -16,9 +16,6 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     name: Build and Deploy to Cloudflare Pages
-    env:
-      CALLBACK_URL: ${{ secrets.DEPLOYMENT_CALLBACK_URL }}
-      CALLBACK_SECRET: ${{ secrets.DEPLOYMENT_CALLBACK_SECRET }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -48,22 +45,3 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy dist --project-name=nevino-blog --branch=master
-
-      - name: Validate deployment callback configuration
-        if: ${{ always() }}
-        run: |
-          test -n "$CALLBACK_URL" || { echo "DEPLOYMENT_CALLBACK_URL is required" >&2; exit 1; }
-          test -n "$CALLBACK_SECRET" || { echo "DEPLOYMENT_CALLBACK_SECRET is required" >&2; exit 1; }
-
-      - name: Report deployment result
-        if: ${{ always() }}
-        env:
-          COMMIT_SHA: ${{ github.sha }}
-          JOB_STATUS: ${{ job.status }}
-        run: |
-          case "$JOB_STATUS" in
-            success) OUTCOME="success" ;;
-            failure|cancelled) OUTCOME="failure" ;;
-            *) OUTCOME="failure" ;;
-          esac
-          curl --fail-with-body --silent --show-error --retry 2 --connect-timeout 10 --max-time 30 -X POST "$CALLBACK_URL" -H "Content-Type: application/json" -H "X-Deployment-Callback-Secret: $CALLBACK_SECRET" --data "{\"commitSha\":\"$COMMIT_SHA\",\"outcome\":\"$OUTCOME\"}"
