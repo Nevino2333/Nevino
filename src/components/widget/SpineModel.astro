@@ -25,9 +25,11 @@ import { url } from "@/utils/url-utils";
 }
 
 <!-- 引入消息框组件 -->
-<MessageBox />
+{spineModelConfig.enable && (
+  <>
+    <MessageBox />
 
-<script is:inline define:vars={{ spineModelConfig, modelPath: url(spineModelConfig.model.path), atlasPath: url(spineModelConfig.model.path.replace(".json", ".atlas")), cssPath: url("/pio/static/spine-player.min.css"), jsPath: url("/pio/static/spine-player.min.js") }}>
+    <script is:inline define:vars={{ spineModelConfig, modelPath: url(spineModelConfig.model.path), atlasPath: url(spineModelConfig.model.path.replace(".json", ".atlas")), cssPath: url("/pio/static/spine-player.min.css"), jsPath: url("/pio/static/spine-player.min.js") }}>
   // 动态加载 Spine CSS（带本地备用）
   function loadSpineCSS() {
     if (!spineModelConfig.enable) return;
@@ -397,3 +399,5 @@ import { url } from "@/utils/url-utils";
     initSpineModel();
   }
 </script>
+  </>
+)}

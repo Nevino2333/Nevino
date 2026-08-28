@@ -54,7 +54,29 @@ const managerConfigStr = JSON.stringify({
 		noCover: i18n(I18nKey.musicNoCover),
 	},
 });
+
+// 视图配置全站只注入一次，供多个 MusicPlayer 实例共享（代替每实例内联）
+const musicViewCfgStr = JSON.stringify({
+	showLyrics: config.showLyrics ?? true,
+	i18n: {
+		noPlaying: i18n(I18nKey.musicNoPlaying),
+		lyrics: i18n(I18nKey.musicLyrics),
+		noLyrics: i18n(I18nKey.musicNoLyrics),
+		loadingLyrics: i18n(I18nKey.musicLoadingLyrics),
+		failedLyrics: i18n(I18nKey.musicFailedLyrics),
+		noSongs: i18n(I18nKey.musicNoSongs),
+		error: i18n(I18nKey.musicError),
+		play: i18n(I18nKey.musicPlay),
+		pause: i18n(I18nKey.musicPause),
+		noCover: i18n(I18nKey.musicNoCover),
+		music: i18n(I18nKey.music),
+	},
+});
 ---
+
+<script is:inline define:vars={{ musicViewCfgStr }}>
+	window.__fireflyMusicViewCfg = JSON.parse(musicViewCfgStr);
+</script>
 
 <script is:inline data-swup-ignore-script define:vars={{ managerConfigStr }}>
 (function () {
