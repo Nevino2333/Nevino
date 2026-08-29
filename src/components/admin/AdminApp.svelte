@@ -150,7 +150,9 @@ async function logout() {
 
 function changesEditor(nextRoute: AdminRoute): boolean {
 	if (route.view === "posts")
-		return nextRoute.view !== "posts" || nextRoute.resourceId !== route.resourceId;
+		return (
+			nextRoute.view !== "posts" || nextRoute.resourceId !== route.resourceId
+		);
 	if (route.view === "pages") return nextRoute.view !== "pages" && pagesDirty;
 	return false;
 }
