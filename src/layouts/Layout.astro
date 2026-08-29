@@ -185,7 +185,7 @@ const siteLang = lang.replace("_", "-");
     <meta name="generator" content={Astro.generator} />
     {
       wallpaperPreloadImage && backgroundWallpaper.mode !== "none" && (
-        <link rel="preload" as="image" href={wallpaperPreloadImage} fetchpriority="high" />
+        <link rel="preload" as="image" href={wallpaperPreloadImage} fetchpriority="low" />
       )
     }
     {
