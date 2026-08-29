@@ -265,6 +265,7 @@ export type ConfigFieldMeta =
 			maxLength?: number;
 			placeholder?: string;
 			urlPrefixes?: string[];
+			upload?: { accept: string };
 	  }
 	| {
 			key: string;

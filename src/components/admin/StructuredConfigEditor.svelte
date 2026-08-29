@@ -1,5 +1,5 @@
 <script lang="ts">
-import { adminRequest } from "./admin-api";
+import { adminApi, adminRequest } from "./admin-api";
 import type {
 	ConfigFieldBinding,
 	SettingsDiff,
@@ -94,9 +94,41 @@ function setValue(id: string, value: unknown) {
 	fieldErrors = { ...fieldErrors, [id]: "" };
 }
 
-function setCode(id: string, value: string) {
-	if (!detail) return;
-	detail.code = { ...detail.code, [id]: value };
+function chooseUpload(binding: ConfigFieldBinding) {
+	if (!binding.field.upload) return;
+	const input = document.createElement("input");
+	input.type = "file";
+	input.accept = binding.field.upload.accept;
+	input.onchange = () => {
+		const file = input.files?.[0];
+		if (file) void uploadField(binding.id, file);
+	};
+	input.click();
+}
+
+async function uploadField(id: string, file: File) {
+	if (!file || saving) return;
+	try {
+		const csrfToken = await adminApi.loadCsrf();
+		const form = new FormData();
+		form.append("file", file);
+		const response = await fetch("/api/admin/media", {
+			method: "POST",
+			credentials: "same-origin",
+			headers: { "X-CSRF-Token": csrfToken },
+			body: form,
+		});
+		const body = (await response.json().catch(() => ({}))) as {
+			data?: { media?: { public_url?: string } };
+			message?: string;
+		};
+		if (!response.ok || !body.data?.media?.public_url)
+			throw new Error(body.message || "文件上传失败");
+		setValue(id, body.data.media.public_url);
+		onnotice("已上传 " + file.name + "，地址已填入字段");
+	} catch (cause) {
+		onerror(cause instanceof Error ? cause.message : "文件上传失败");
+	}
 }
 
 function setListItem(
@@ -365,8 +397,11 @@ $effect(() => {
 		{/if}
 		{#if isRef(value)}
 			<input id="field-{binding.id}" type="text" value={"引用 " + JSON.stringify(value)} disabled />
-		{:else if field.type === "text" || field.type === "url" || field.type === "image" || field.type === "color"}
-			<input id="field-{binding.id}" type="text" placeholder={field.placeholder ?? ""} value={typeof value === "string" ? value : ""} oninput={(event) => setValue(binding.id, event.currentTarget.value)} />
+			{:else if field.type === "text" || field.type === "url" || field.type === "image" || field.type === "color"}
+				<div class="admin-field-input-row">
+					<input id="field-{binding.id}" type="text" placeholder={field.placeholder ?? ""} value={typeof value === "string" ? value : ""} oninput={(event) => setValue(binding.id, event.currentTarget.value)} />
+					{#if field.upload}<button type="button" class="admin-upload-inline" disabled={saving} onclick={() => chooseUpload(binding)} title="上传文件">上传</button>{/if}
+				</div>
 		{:else if field.type === "textarea"}
 			<textarea id="field-{binding.id}" rows="4" value={typeof value === "string" ? value : ""} oninput={(event) => setValue(binding.id, event.currentTarget.value)}></textarea>
 		{:else if field.type === "number"}

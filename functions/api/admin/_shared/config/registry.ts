@@ -19,6 +19,11 @@ type FieldBase = {
 	help?: string;
 };
 
+export type FieldUpload = {
+	// 提供时字段旁显示"上传"按钮，accept 为文件选择器的 MIME/扩展名过滤
+	accept: string;
+};
+
 export type FieldMeta = FieldBase &
 	(
 		| {
@@ -27,6 +32,7 @@ export type FieldMeta = FieldBase &
 				maxLength?: number;
 				placeholder?: string;
 				urlPrefixes?: string[];
+				upload?: FieldUpload;
 		  }
 		| { type: "number"; min?: number; max?: number; integer?: boolean }
 		| { type: "boolean" }
@@ -140,7 +146,12 @@ const textarea = (
 const url = (
 	key: string,
 	label: string,
-	options?: { required?: boolean; urlPrefixes?: string[]; help?: string },
+	options?: {
+		required?: boolean;
+		urlPrefixes?: string[];
+		help?: string;
+		upload?: FieldUpload;
+	},
 ): FieldMeta => ({
 	key,
 	type: "url",
@@ -149,6 +160,7 @@ const url = (
 	maxLength: 500,
 	urlPrefixes: options?.urlPrefixes,
 	help: options?.help,
+	upload: options?.upload,
 });
 
 const number = (
@@ -560,10 +572,18 @@ export const CONFIG_GROUPS: ConfigGroup[] = [
 					url("url", "音频地址", {
 						required: true,
 						urlPrefixes: ["http://", "https://", "/"],
-						help: "public/assets/music/ 下的 mp3 路径或外链",
+						help: "上传音频或填写 public/assets/music/ 下的路径、外链",
+						upload: { accept: "audio/mpeg,audio/flac,audio/ogg,audio/wav,audio/mp4" },
 					}),
-					url("cover", "封面图", { urlPrefixes: standardUrlPrefixes }),
-					url("lrc", "歌词文件或内容", { urlPrefixes: localUrlPrefixes }),
+					url("cover", "封面图", {
+						urlPrefixes: standardUrlPrefixes,
+						upload: { accept: "image/png,image/jpeg,image/webp,image/gif" },
+					}),
+					url("lrc", "歌词文件或内容", {
+						urlPrefixes: localUrlPrefixes,
+						help: "上传 .lrc 文件、填写路径，或直接粘贴歌词内容",
+						upload: { accept: ".lrc,text/plain" },
+					}),
 				],
 				defaultItem: { name: "", artist: "", url: "", cover: "", lrc: "" },
 				maxItems: 200,

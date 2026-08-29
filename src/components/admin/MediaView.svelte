@@ -18,6 +18,7 @@ let unavailable = $state(false);
 let uploading = $state(false);
 let uploadProgress = $state(0);
 let uploadStatus = $state("");
+let uploadAccept = $state("image/png,image/jpeg,image/webp,image/gif");
 let dragActive = $state(false);
 let input = $state<HTMLInputElement>();
 
@@ -81,7 +82,7 @@ async function uploadMedia(file: File) {
 					uploadProgress = Math.round((event.loaded / event.total) * 100);
 				uploadStatus = `上传中 ${uploadProgress}%`;
 			};
-			xhr.onerror = () => reject(new Error("图片上传失败，请检查网络连接。"));
+			xhr.onerror = () => reject(new Error("文件上传失败，请检查网络连接。"));
 			xhr.onload = () => {
 				if (xhr.status >= 200 && xhr.status < 300) resolve();
 				else {
@@ -96,7 +97,7 @@ async function uploadMedia(file: File) {
 		uploadStatus = "上传完成";
 		await loadMedia();
 	} catch (cause) {
-		onerror(cause instanceof Error ? cause.message : "图片上传失败");
+		onerror(cause instanceof Error ? cause.message : "文件上传失败");
 		uploadStatus = "上传失败";
 	} finally {
 		uploading = false;
@@ -117,15 +118,20 @@ function handleDrop(event: DragEvent) {
 	if (file) uploadMedia(file);
 }
 
-async function copyMediaMarkdown(asset: MediaAsset) {
+async function copyAssetUrl(asset: MediaAsset) {
 	try {
-		await navigator.clipboard.writeText(
-			`![${asset.filename}](${mediaUrl(asset)})`,
-		);
-		onnotice(`已复制 ${asset.filename} 的 Markdown`);
+		await navigator.clipboard.writeText(mediaUrl(asset));
+		onnotice(`已复制 ${asset.filename} 的资源地址`);
 	} catch {
 		onerror("复制失败，请检查浏览器剪贴板权限。");
 	}
+}
+
+function insertIntoSong(asset: MediaAsset, field: "url" | "lrc") {
+	onnotice(
+		`${field === "url" ? "音频" : "歌词"}地址已复制：${mediaUrl(asset)}`,
+	);
+	void navigator.clipboard.writeText(mediaUrl(asset));
 }
 
 async function deleteMedia(asset: MediaAsset) {
@@ -164,7 +170,7 @@ onMount(() => {
 });
 </script>
 
-<section class="admin-view"><div class="admin-view-heading"><div><p class="admin-kicker">MEDIA LIBRARY</p><h2>媒体库</h2><p>上传并管理文章中的图片资源。</p></div><label class:disabled={uploading || unavailable} class="admin-upload-button"><input bind:this={input} type="file" accept="image/png,image/jpeg,image/webp,image/gif" disabled={uploading || unavailable} onchange={uploadFromInput} />{uploading ? uploadStatus : "⇧ 选择图片"}</label></div>
+<section class="admin-view"><div class="admin-view-heading"><div><p class="admin-kicker">MEDIA LIBRARY</p><h2>媒体库</h2><p>统一管理文章图片、音乐、封面与歌词文件。</p></div><div class="admin-media-upload-actions"><select aria-label="上传类型" value={uploadAccept} onchange={(event) => uploadAccept = event.currentTarget.value}><option value="image/png,image/jpeg,image/webp,image/gif">图片</option><option value="audio/mpeg,audio/flac,audio/ogg,audio/wav,audio/mp4">音频</option><option value=".lrc,text/plain">歌词 LRC</option></select><label class:disabled={uploading || unavailable} class="admin-upload-button"><input bind:this={input} type="file" accept={uploadAccept} disabled={uploading || unavailable} onchange={uploadFromInput} />{uploading ? uploadStatus : "⇧ 选择文件"}</label></div></div>
 	{#if unavailable}<div class="admin-inline-state admin-unavailable" role="alert"><span>◇</span><div><strong>媒体存储尚未启用</strong><p>媒体库暂不可用。当前环境未配置 R2 存储，不影响文章编辑与发布。</p></div></div>{/if}
-	{#if loading}<div class="admin-panel admin-state admin-state-large"><span class="admin-spinner"></span><h3>正在加载媒体库</h3><p>正在读取 R2 中的图片资源…</p></div>{:else if !unavailable && media.length === 0}<div class:admin-drop-active={dragActive} class="admin-panel admin-state admin-state-large admin-drop-zone" role="button" tabindex="0" ondragover={(event) => { event.preventDefault(); dragActive = true; }} ondragleave={() => dragActive = false} ondrop={handleDrop} onclick={() => input?.click()} onkeydown={(event) => { if (event.key === "Enter" || event.key === " ") input?.click(); }}><span class="admin-state-icon">▧</span><h3>{uploading ? uploadStatus : "媒体库还是空的"}</h3><p>{uploading ? `正在上传，已完成 ${uploadProgress}%` : "拖拽图片到这里，或点击选择；也可以直接粘贴图片。"}</p>{#if uploading}<progress max="100" value={uploadProgress}></progress>{/if}</div>{:else if media.length > 0}<div class="admin-media-grid">{#each media as asset}<article class="admin-media-card admin-panel"><div class="admin-media-image"><img src={mediaUrl(asset)} alt={asset.filename} loading="lazy" /><span>{asset.mime_type.replace("image/", "").toUpperCase()}</span></div><div class="admin-media-info"><strong title={asset.filename}>{asset.filename}</strong><small>{formatSize(asset.size)} · {formatDate(asset.created_at)}</small><code>{mediaUrl(asset)}</code><div><button onclick={() => oninsert(`![${asset.filename}](${mediaUrl(asset)})`)}>插入正文</button><button onclick={() => oncover(mediaUrl(asset))}>设为封面</button><button onclick={() => copyMediaMarkdown(asset)}>复制 Markdown</button><button class="danger" onclick={() => deleteMedia(asset)}>删除</button></div></div></article>{/each}</div>{/if}
+	{#if loading}<div class="admin-panel admin-state admin-state-large"><span class="admin-spinner"></span><h3>正在加载媒体库</h3><p>正在读取 R2 中的图片资源…</p></div>{:else if !unavailable && media.length === 0}<div class:admin-drop-active={dragActive} class="admin-panel admin-state admin-state-large admin-drop-zone" role="button" tabindex="0" ondragover={(event) => { event.preventDefault(); dragActive = true; }} ondragleave={() => dragActive = false} ondrop={handleDrop} onclick={() => input?.click()} onkeydown={(event) => { if (event.key === "Enter" || event.key === " ") input?.click(); }}><span class="admin-state-icon">▧</span><h3>{uploading ? uploadStatus : "媒体库还是空的"}</h3><p>{uploading ? `正在上传，已完成 ${uploadProgress}%` : "拖拽图片到这里，或点击选择；也可以直接粘贴图片。"}</p>{#if uploading}<progress max="100" value={uploadProgress}></progress>{/if}</div>		{:else if media.length > 0}<div class="admin-media-grid">{#each media as asset}<article class="admin-media-card admin-panel"><div class="admin-media-preview">{#if asset.mime_type.startsWith("image/")}<img src={mediaUrl(asset)} alt={asset.filename} loading="lazy" />{:else if asset.mime_type.startsWith("audio/")}<div class="admin-audio-preview"><span aria-hidden="true">♫</span><audio controls preload="metadata" src={mediaUrl(asset)}></audio></div>{:else}<pre class="admin-lrc-preview">LRC / TXT</pre>{/if}<span>{asset.mime_type.split("/").pop()?.split(";")[0]?.toUpperCase()}</span></div><div class="admin-media-info"><strong title={asset.filename}>{asset.filename}</strong><small>{formatSize(asset.size)} · {formatDate(asset.created_at)}</small><code>{mediaUrl(asset)}</code><div>{#if asset.mime_type.startsWith("image/")}<button onclick={() => oninsert(`![${asset.filename}](${mediaUrl(asset)})`)}>插入正文</button><button onclick={() => oncover(mediaUrl(asset))}>设为封面</button><button onclick={() => copyAssetUrl(asset)}>复制地址</button>{:else if asset.mime_type.startsWith("audio/")}<button onclick={() => copyAssetUrl(asset)}>复制音频地址</button>{:else}<button onclick={() => copyAssetUrl(asset)}>复制歌词地址</button>{/if}<button class="danger" onclick={() => deleteMedia(asset)}>删除</button></div></div></article>{/each}</div>{/if}
 </section>

@@ -5,9 +5,17 @@ const CONTENT_TYPES: Record<string, string> = {
 	jpg: "image/jpeg",
 	webp: "image/webp",
 	gif: "image/gif",
+	mp3: "audio/mpeg",
+	flac: "audio/flac",
+	ogg: "audio/ogg",
+	wav: "audio/wav",
+	m4a: "audio/mp4",
+	lrc: "text/plain; charset=utf-8",
+	txt: "text/plain; charset=utf-8",
 };
 
-const KEY_PATTERN = /^[A-Za-z0-9_-]{22}\.(png|jpg|webp|gif)$/;
+const KEY_PATTERN =
+	/^[A-Za-z0-9_-]{22}\.(png|jpg|webp|gif|mp3|flac|ogg|wav|m4a|lrc|txt)$/;
 
 const errorResponse = (error: string, status: number): Response =>
 	Response.json(
