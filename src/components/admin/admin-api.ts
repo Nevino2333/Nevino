@@ -80,9 +80,10 @@ export function createAdminClient(fetcher: Fetcher = fetch): AdminClient {
 
 	async function ensureCsrf(): Promise<void> {
 		if (csrfToken) return;
-		const data = await rawRequest<{ csrfToken: string }>("/csrf", {
-			headers: {},
-		});
+		const data = await rawRequest<{
+			authenticated: boolean;
+			csrfToken: string;
+		}>("/session", { headers: {} });
 		csrfToken = data.csrfToken;
 	}
 

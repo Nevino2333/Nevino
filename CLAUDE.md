@@ -4,20 +4,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Firefly is a feature-rich static blog theme built on **Astro 6** with **Svelte 5** for interactive components. It's a fork of [Fuwari](https://github.com/saicaca/fuwari) extended with extensive features. Primary language is Chinese (Simplified) with i18n for en, zh_TW, ja, ru.
+Firefly is a feature-rich blog built on **Astro 7** with **Svelte 5** for interactive components. It's a fork of [Fuwari](https://github.com/saicaca/fuwari) extended with extensive features, including a self-hosted online admin backend. Primary language is Chinese (Simplified) with i18n for en, zh_TW, ja, ru.
 
 ## Commands
 
 | Command | Purpose |
 |---|---|
 | `pnpm dev` | Dev server at `localhost:4321` |
-| `pnpm build` | Production build (icons → LQIPs → Astro build → Pagefind indexing) |
+| `pnpm build` | Production build (icons → LQIPs → Astro build → font subsets → Pagefind indexing) |
 | `pnpm preview` | Preview production build |
 | `pnpm check` | `astro check` for type/error checking |
 | `pnpm type-check` | `tsc --noEmit --isolatedDeclarations` |
-| `pnpm lint` | Biome lint + auto-fix |
-| `pnpm format` | Biome format |
+| `pnpm lint` / `pnpm format` | Biome lint + auto-fix / format `src` |
+| `pnpm test:admin` | Admin backend unit tests (`tests/admin/*.test.ts`, node:test) |
 | `pnpm new-post <filename>` | Scaffold a new blog post |
+| `pnpm post-studio` | Local web studio for editing post frontmatter (port 4323) |
+| `pnpm admin:db:local` | Apply D1 migrations to the local admin database |
+| `pnpm admin:dev` | Serve `dist` through `wrangler pages dev` with local D1/R2 bindings on port 8788 |
 
 Package manager is **pnpm** (enforced). Node.js >= 22 required.
 
@@ -33,29 +36,35 @@ Package manager is **pnpm** (enforced). Node.js >= 22 required.
 
 All features are toggled/configured via TypeScript files in `src/config/`, exported through the barrel at `src/config/index.ts`. Key configs:
 
-- `siteConfig.ts` — core site settings, theme, pagination
+- `siteConfig.ts` — core site settings, theme, pagination, page toggles
 - `sidebarConfig.ts` — sidebar layout (left/right/both, widget ordering)
 - `commentConfig.ts`, `analyticsConfig.ts`, `fontConfig.ts`, etc.
-
-### Layout System
-
-- `Layout.astro` — base HTML shell (head, body, theme init, analytics, Swup hooks)
-- `MainGridLayout.astro` — full page grid with sidebar(s), navbar, wallpaper, footer
 
 ### Content Collections
 
 Defined in `src/content.config.ts`:
 - `posts` — blog posts (`.md`/`.mdx`) with frontmatter: title, published, tags, category, draft, pinned, password, comment, etc.
-- `spec` — special pages (about, guestbook)
+- `spec` — special pages (about, friends, guestbook)
+
+### Admin Backend (Cloudflare Pages Functions + D1 + R2)
+
+The site has a self-hosted admin at `/admin/` for managing content without touching code:
+
+- **API**: `functions/api/admin/**` — session/CSRF auth, drafts lifecycle (publish/withdraw/rename/rollback/history/import), media (R2), publish tasks, content operations, staged site settings & spec pages (published as whitelisted GitHub commits), audit, sessions, overview. Shared layer in `functions/api/admin/_shared/` (repositories, services, GitHub gateway, markdown policy/validation).
+- **Data ownership**: GitHub is the source of truth for published content and config files; D1 (`nevino-admin`, schema in `migrations/*.sql`) holds drafts, revisions, publish tasks, sessions, audit and staged changesets; R2 (`firefly-media`) holds media objects. Partial external failures land in `reconciliation_required` with recoverable evidence.
+- **UI**: `src/components/admin/**` (Svelte 5), mounted from `src/pages/admin/`.
+- **Deployment callback**: `.github/workflows/cloudflare-pages.yml` builds and deploys, then reports the commit outcome to `functions/api/admin/deployment-callback.ts` so publish tasks and content operations converge.
+- **Tests**: `tests/admin/*.test.ts` — service-level tests with in-memory fakes for D1/GitHub/R2 (`pnpm test:admin`).
 
 ### Key Directories
 
-- `src/components/` — organized by domain: `analytics/`, `comment/`, `common/`, `controls/`, `features/`, `layout/`, `misc/`, `pages/`, `widget/`
-- `src/plugins/` — 15 custom remark/rehype plugins (Mermaid, PlantUML, KaTeX, GitHub cards, reading time, etc.)
+- `src/components/` — organized by domain: `admin/`, `analytics/`, `comment/`, `common/`, `controls/`, `features/`, `layout/`, `misc/`, `pages/`, `widget/`
+- `src/plugins/` — custom remark/rehype plugins (Mermaid, PlantUML, KaTeX, GitHub cards, reading time, etc.)
 - `src/i18n/` — translation keys in `i18nKey.ts`, language files in `languages/*.ts`, lookup via `translation.ts`
-- `src/utils/` — content sorting, crypto (encrypted posts), date formatting, image processing/LQIP, TOC generation
+- `src/utils/` — content sorting, crypto (encrypted posts), date formatting, image processing/LQIP, TOC generation, friends feed
 - `src/pages/` — Astro file-based routing
-- `scripts/` — build-time utilities (`generate-icons.js`, `generate-lqips.ts`, `new-post.js`)
+- `functions/` — Cloudflare Pages Functions (admin API, `/media/*` R2 serving, `/api/stats/visit`)
+- `scripts/` — build-time utilities (`generate-icons.js`, `generate-lqips.ts`, `subset-fonts.ts`, `new-post.js`, `post-studio.js`)
 
 ### Path Aliases (tsconfig.json)
 
@@ -69,13 +78,11 @@ Defined in `src/content.config.ts`:
 
 ## Build Pipeline
 
-Multi-step: `scripts/generate-icons.js` → `scripts/generate-lqips.ts` → `astro build` → `pagefind --site dist`
+Multi-step: `scripts/generate-icons.js` → `scripts/generate-lqips.ts` → `astro build` → `scripts/subset-fonts.ts` → `pagefind --site dist`
 
 Icons/LQIP data are generated into `src/constants/` and committed. Regenerate with `pnpm icons` or `pnpm lqips`.
 
 ## Deployment
 
-- **Vercel** (default, `vercel.json`)
-- **Cloudflare Workers** (`wrangler.jsonc`, set `CF_WORKERS` env var)
-- Static output to `dist/`
-
+- **Cloudflare Pages** (active): push to `master` → GitHub Actions builds the site and runs `wrangler pages deploy dist`, then posts a deployment callback to the admin API.
+- `vercel.json` and `.github/workflows/deploy.yml` are legacy fallbacks, not part of the active flow.

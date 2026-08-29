@@ -5,6 +5,7 @@ import {
 	canLeaveEditor,
 	canLogoutEditor,
 	canPublishEditor,
+	canReconcilePublishTask,
 	canRecoverDeploymentWait,
 	confirmDestructiveEditorAction,
 	performLogout,
@@ -148,6 +149,13 @@ test("awaiting_deploy 持续轮询并允许解除等待", () => {
 test("发布终态停止轮询", () => {
 	assert.equal(shouldPollPublishTask("published"), false);
 	assert.equal(shouldPollPublishTask("build_failed"), false);
+});
+
+test("待对账任务停止轮询并只允许对账操作", () => {
+	assert.equal(shouldPollPublishTask("reconciliation_required"), false);
+	assert.equal(canReconcilePublishTask("reconciliation_required"), true);
+	assert.equal(canReconcilePublishTask("awaiting_deploy"), false);
+	assert.equal(canReconcilePublishTask("published"), false);
 });
 
 test("轮询临时错误有限退避后继续并在终态停止", async () => {

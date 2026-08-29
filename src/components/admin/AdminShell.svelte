@@ -26,17 +26,36 @@ let {
 }: Props = $props();
 let drawerOpen = $state(false);
 
-const navigation: { id: AdminView; label: string; icon: string }[] = [
-	{ id: "dashboard", label: "仪表盘", icon: "⌂" },
-	{ id: "posts", label: "文章", icon: "✎" },
-	{ id: "media", label: "媒体库", icon: "▧" },
-	{ id: "pages", label: "页面", icon: "▤" },
-	{ id: "settings", label: "设置", icon: "⚙" },
-	{ id: "publishing", label: "发布", icon: "⇧" },
-	{ id: "security", label: "安全", icon: "◇" },
+const navigation: {
+	heading: string;
+	items: { id: AdminView; label: string; icon: string }[];
+}[] = [
+	{ heading: "概览", items: [{ id: "dashboard", label: "仪表盘", icon: "⌂" }] },
+	{
+		heading: "内容",
+		items: [
+			{ id: "posts", label: "文章", icon: "✎" },
+			{ id: "pages", label: "页面", icon: "▤" },
+			{ id: "friends", label: "友链", icon: "❐" },
+			{ id: "gallery", label: "相册", icon: "▣" },
+			{ id: "announcement", label: "公告", icon: "♪" },
+			{ id: "sponsor", label: "赞助", icon: "♡" },
+			{ id: "tools", label: "工具页", icon: "⚒" },
+		],
+	},
+	{ heading: "资产", items: [{ id: "media", label: "媒体库", icon: "▧" }] },
+	{
+		heading: "系统",
+		items: [
+			{ id: "settings", label: "站点设置", icon: "⚙" },
+			{ id: "publishing", label: "发布中心", icon: "⇧" },
+			{ id: "security", label: "安全审计", icon: "◇" },
+		],
+	},
 ];
+const allItems = navigation.flatMap((group) => group.items);
 const sectionTitle = $derived(
-	navigation.find((item) => item.id === route.view)?.label || "后台",
+	allItems.find((item) => item.id === route.view)?.label || "后台",
 );
 
 function navigate(view: AdminView) {
@@ -50,8 +69,11 @@ function navigate(view: AdminView) {
 	<aside class:open={drawerOpen} class="admin-app-nav">
 		<a class="admin-app-brand" href="/"><span class="admin-brand-mark">N</span><span><strong>Nevino's blog</strong><small>写作后台</small></span></a>
 		<nav aria-label="后台导航">
-			{#each navigation as item}
-				<button class:active={route.view === item.id} onclick={() => navigate(item.id)}><span aria-hidden="true">{item.icon}</span>{item.label}</button>
+			{#each navigation as group}
+				<p class="admin-nav-heading">{group.heading}</p>
+				{#each group.items as item}
+					<button class:active={route.view === item.id} onclick={() => navigate(item.id)}><span aria-hidden="true">{item.icon}</span>{item.label}</button>
+				{/each}
 			{/each}
 		</nav>
 		<div class="admin-nav-foot"><span class="admin-session-status"><span class="admin-status-dot"></span>安全会话已连接</span><a href="/">查看博客 <span aria-hidden="true">↗</span></a><button onclick={onlogout}>退出登录</button></div>
@@ -62,7 +84,7 @@ function navigate(view: AdminView) {
 			<div class="admin-topbar-actions"><button class="admin-button admin-button-ghost" onclick={onnewpost}>＋ 新建文章</button><span class="admin-avatar"><img src="/assets/Avater.png" alt="管理员" /></span></div>
 		</header>
 		<div class="admin-mobile-tabs" aria-label="后台区域">
-			{#each navigation.slice(0, 3) as item}<button class:active={route.view === item.id} onclick={() => navigate(item.id)}>{item.label}</button>{/each}
+			{#each allItems.slice(0, 4) as item}<button class:active={route.view === item.id} onclick={() => navigate(item.id)}>{item.label}</button>{/each}
 		</div>
 		{#if error}<div class="admin-alert admin-error" role="alert"><span>!</span>{error}<button aria-label="关闭" onclick={onclearerror}>×</button></div>{/if}
 		{#if notice}<div class="admin-alert admin-notice" role="status"><span>✓</span>{notice}<button aria-label="关闭" onclick={onclearnotice}>×</button></div>{/if}

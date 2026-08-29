@@ -1,7 +1,55 @@
 ---
 import AdminApp from "@components/admin/AdminApp.svelte";
+import FontSetup from "@components/features/FontSetup.astro";
 import adminCss from "@/styles/admin.css?raw";
+import { siteConfig } from "@/config";
+import "@/styles/variables.styl";
+
+// 后台与前台共用同一套主题令牌（OKLCH + --hue）与明暗模式存储键，
+// 管理员在前台切换的主题/色相会同步到后台。
+const defaultMode = siteConfig.themeColor.defaultMode;
+const configHue = siteConfig.themeColor.hue;
 ---
 
-<style is:inline set:html={adminCss}></style>
-<AdminApp client:load />
+<!doctype html>
+<html lang={siteConfig.lang.replace("_", "-")}>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="robots" content="noindex" />
+		<title>写作后台</title>
+		<FontSetup />
+		<style is:inline set:html={adminCss}></style>
+		<script is:inline define:vars={{ defaultMode, configHue }}>
+			(() => {
+				const apply = () => {
+					const stored = localStorage.getItem("theme") || defaultMode;
+					const resolved =
+						stored === "system"
+							? window.matchMedia("(prefers-color-scheme: dark)").matches
+								? "dark"
+								: "light"
+							: stored;
+					document.documentElement.classList.toggle("dark", resolved === "dark");
+					document.documentElement.style.setProperty(
+						"--hue",
+						String(localStorage.getItem("hue") || configHue),
+					);
+				};
+				apply();
+				window.addEventListener("storage", (event) => {
+					if (event.key === "theme" || event.key === "hue" || event.key === null)
+						apply();
+				});
+				window
+					.matchMedia("(prefers-color-scheme: dark)")
+					.addEventListener("change", () => {
+						if ((localStorage.getItem("theme") || defaultMode) === "system") apply();
+					});
+			})();
+		</script>
+	</head>
+	<body>
+		<AdminApp client:load />
+	</body>
+</html>

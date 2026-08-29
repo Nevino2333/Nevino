@@ -196,9 +196,9 @@ test("部署成功提升候选证据为 deployed 并将工作副本 clean", asyn
 		"published",
 		"2026-08-27T03:00:00.000Z",
 	);
-	assert.match(statements[1].sql, /deployed_commit_sha = commit_sha/);
-	assert.match(statements[1].sql, /deployed_at = \?/);
-	assert.match(statements[1].sql, /workspace_state = 'clean'/);
+	assert.match(statements[2].sql, /deployed_commit_sha = commit_sha/);
+	assert.match(statements[2].sql, /deployed_at = \?/);
+	assert.match(statements[2].sql, /workspace_state = 'clean'/);
 });
 
 test("部署失败保留既有 deployed 证据并维持 modified", async () => {
@@ -231,7 +231,7 @@ test("部署失败保留既有 deployed 证据并维持 modified", async () => {
 		"build_failed",
 		"2026-08-27T03:00:00.000Z",
 	);
-	assert.doesNotMatch(statements[1].sql, /deployed_commit_sha = commit_sha/);
-	assert.match(statements[1].sql, /workspace_state = 'modified'/);
-	assert.match(statements[1].sql, /publication_state = 'published'/);
+	assert.doesNotMatch(statements[2].sql, /deployed_commit_sha = commit_sha/);
+	assert.match(statements[2].sql, /workspace_state = 'modified'/);
+	assert.match(statements[2].sql, /publication_state = 'published'/);
 });

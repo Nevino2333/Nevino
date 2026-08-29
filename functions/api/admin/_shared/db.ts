@@ -42,9 +42,3 @@ export const getSession = (env: Env, id: string) =>
 		id,
 		Date.now(),
 	);
-export const getDraft = (env: Env, id: string) =>
-	first<DraftRow>(
-		env.DB,
-		"SELECT id, content_id, slug, title, published, updated, description, ai_summary, image, tags_json, category, lang, pinned, author, source_link, license_name, license_url, comment, content, status, created_at, updated_at, github_path, github_sha, commit_sha, version, sync_status FROM admin_drafts WHERE id = ?",
-		id,
-	);

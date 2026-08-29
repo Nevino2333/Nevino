@@ -57,6 +57,9 @@ export const shouldPollPublishTask = (status: PublishTaskStatus): boolean =>
 export const canRecoverDeploymentWait = (status: PublishTaskStatus): boolean =>
 	status === "awaiting_deploy";
 
+export const canReconcilePublishTask = (status: PublishTaskStatus): boolean =>
+	status === "reconciliation_required";
+
 export const pollPublishTaskWithRetry = async <
 	T extends { status: PublishTaskStatus },
 >(

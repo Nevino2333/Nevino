@@ -24,11 +24,16 @@ import {
 } from "./editor-state";
 import LoginView from "./LoginView.svelte";
 import MediaView from "./MediaView.svelte";
+import PagesView from "./PagesView.svelte";
 import PostEditorView from "./PostEditorView.svelte";
 import PostImportDialog from "./PostImportDialog.svelte";
 import PostListView from "./PostListView.svelte";
+import PublishingView from "./PublishingView.svelte";
 import { clampDraftPage } from "./pagination";
 import { defaultPostFilters, postFilterQuery } from "./post-filters";
+import SecurityView from "./SecurityView.svelte";
+import SettingsView from "./SettingsView.svelte";
+import StructuredConfigEditor from "./StructuredConfigEditor.svelte";
 
 type Props = { initialView?: "login" | "app" };
 let { initialView = "app" }: Props = $props();
@@ -54,6 +59,7 @@ let mediaCover = $state<{ value: string; key: number } | null>(null);
 let currentPostId = $state<string | null>(null);
 let editorMounted = $state(false);
 let editorDirty = $state(false);
+let pagesDirty = $state(false);
 let importDialogOpen = $state(false);
 let skipNextRouteConfirmation = false;
 let mediaKey = 0;
@@ -143,18 +149,18 @@ async function logout() {
 }
 
 function changesEditor(nextRoute: AdminRoute): boolean {
-	return (
-		route.view === "posts" &&
-		(nextRoute.view !== "posts" || nextRoute.resourceId !== route.resourceId)
-	);
+	if (route.view === "posts")
+		return nextRoute.view !== "posts" || nextRoute.resourceId !== route.resourceId;
+	if (route.view === "pages") return nextRoute.view !== "pages" && pagesDirty;
+	return false;
 }
 
 function confirmNavigation(nextRoute: AdminRoute): boolean {
-	return (
-		!changesEditor(nextRoute) ||
-		canLeaveEditor(editorDirty, () =>
-			window.confirm("当前文章有未保存更改，确定要离开吗？"),
-		)
+	if (!changesEditor(nextRoute)) return true;
+	if (route.view === "pages")
+		return window.confirm("页面有未保存修改，确定要离开吗？");
+	return canLeaveEditor(editorDirty, () =>
+		window.confirm("当前文章有未保存更改，确定要离开吗？"),
 	);
 }
 
@@ -167,6 +173,7 @@ function navigate(view: AdminView, resourceId: string | null = null) {
 		currentPostId = resourceId;
 		editorMounted = true;
 	}
+	if (route.view === "pages" && nextRoute.view !== "pages") pagesDirty = false;
 	skipNextRouteConfirmation = true;
 	pushAdminRoute(nextRoute);
 }
@@ -248,15 +255,16 @@ onMount(() => {
 <svelte:head><title>{authenticated ? "写作后台" : "管理员登录"}</title></svelte:head>
 
 {#if loading}<main class="admin-shell admin-loading"><span class="admin-spinner"></span><p>正在验证安全会话…</p></main>{:else if !authenticated}<LoginView submitting={loggingIn} {error} onsubmit={login} />{:else}
-	<AdminShell {route} {error} {notice} onnavigate={navigate} onnewpost={() => navigate("posts", null)} onlogout={logout} onclearerror={() => error = ""} onclearnotice={() => notice = ""}>
-		{#if route.view === "dashboard"}<DashboardView {drafts} loading={draftsLoading} {mediaCount} {mediaUnavailable} onnavigate={(view) => navigate(view)} onopenpost={(id) => navigate("posts", id)} />
-		{:else if route.view === "posts" || (route.view === "media" && editorMounted)}<section class:hidden={route.view !== "posts"} class="admin-view admin-posts-view"><PostListView {drafts} selectedId={currentPostId} loading={draftsLoading} page={draftPage} pageSize={draftPageSize} total={draftTotal} filters={route.postFilters} onselect={(id) => navigate("posts", id)} onfilters={updatePostFilters} onimport={() => importDialogOpen = true} /><PostEditorView resourceId={currentPostId} {mediaInsert} {mediaCover} onupdated={updateDraft} ondeleted={deleteDraft} oncreated={(id) => navigate("posts", id)} onmedia={() => navigate("media")} onerror={(message) => error = message} onnotice={(message) => notice = message} ondirtychange={(dirty) => editorDirty = dirty} /></section>
-		{#if route.view === "media"}<MediaView onerror={(message) => error = message} onnotice={(message) => notice = message} onstate={(state) => { mediaCount = state.count; mediaUnavailable = state.unavailable; }} oninsert={insertMedia} oncover={setCover} />{/if}
-		{:else if route.view === "media"}<MediaView onerror={(message) => error = message} onnotice={(message) => notice = message} onstate={(state) => { mediaCount = state.count; mediaUnavailable = state.unavailable; }} oninsert={insertMedia} oncover={setCover} />
-		{:else if route.view === "pages"}<section class="admin-view"><div class="admin-view-heading"><div><p class="admin-kicker">PAGES</p><h2>页面</h2><p>独立页面由仓库内容管理，后台不会绕过现有发布流程。</p></div></div><div class="admin-panel admin-state admin-state-large"><span class="admin-state-icon">▤</span><h3>页面管理尚未接入 API</h3><p>关于、友链与留言板等页面仍由仓库中的内容和配置驱动。</p><a class="admin-button admin-button-ghost" href="/">查看站点页面</a></div></section>
-		{:else if route.view === "settings"}<section class="admin-view"><div class="admin-view-heading"><div><p class="admin-kicker">SETTINGS</p><h2>设置</h2><p>后台遵循 Firefly 当前的仓库配置。</p></div></div><div class="admin-settings-grid"><article class="admin-panel admin-setting-card"><span>◐</span><div><h3>外观模式</h3><p>自动跟随系统浅色或深色偏好，与博客视觉保持一致。</p></div><strong>自动</strong></article><article class="admin-panel admin-setting-card"><span>⌘</span><div><h3>内容格式</h3><p>文章正文使用 Markdown，预览始终按纯文本安全显示。</p></div><strong>Markdown</strong></article><article class="admin-panel admin-setting-card"><span>▧</span><div><h3>媒体存储</h3><p>{mediaUnavailable ? "当前环境未配置 R2，文章编辑仍可正常使用。" : "媒体功能在配置 Cloudflare R2 后可用。"}</p></div><strong>{mediaUnavailable ? "未连接" : "按需检测"}</strong></article></div></section>
-		{:else if route.view === "publishing"}<section class="admin-view"><div class="admin-view-heading"><div><p class="admin-kicker">PUBLISHING</p><h2>发布任务</h2><p>文章编辑器会展示当前发布任务并持续轮询状态。</p></div></div><div class="admin-panel admin-state admin-state-large"><span class="admin-state-icon">⇧</span><h3>从文章编辑器发起发布</h3><p>选择文章后可创建带幂等键的安全发布任务。</p><button class="admin-button admin-button-primary" onclick={() => navigate("posts")}>前往文章</button></div></section>
-		{:else}<section class="admin-view"><div class="admin-view-heading"><div><p class="admin-kicker">SECURITY</p><h2>安全</h2><p>查看本次后台会话采用的安全策略。</p></div></div><div class="admin-security-grid"><article class="admin-panel"><span>✓</span><div><h3>同源安全会话</h3><p>身份通过安全 Cookie 维持，不在 localStorage 中保存 token 或密码。</p></div></article><article class="admin-panel"><span>✓</span><div><h3>CSRF 防护</h3><p>保存、发布、上传与删除请求均携带当前会话的 X-CSRF-Token。</p></div></article><article class="admin-panel"><span>✓</span><div><h3>安全预览</h3><p>正文预览仅输出文本，不执行用户输入的 HTML。</p></div></article></div><button class="admin-button admin-button-danger admin-security-logout" onclick={logout}>退出当前会话</button></section>{/if}
-	</AdminShell>
+		<AdminShell {route} {error} {notice} onnavigate={navigate} onnewpost={() => navigate("posts", null)} onlogout={logout} onclearerror={() => error = ""} onclearnotice={() => notice = ""}>
+			{#if route.view === "dashboard"}<DashboardView {drafts} loading={draftsLoading} onnavigate={(view) => navigate(view)} onopenpost={(id) => navigate("posts", id)} onerror={(message) => error = message} />
+			{:else if route.view === "posts" || (route.view === "media" && editorMounted)}<section class:hidden={route.view !== "posts"} class="admin-view admin-posts-view"><PostListView {drafts} selectedId={currentPostId} loading={draftsLoading} page={draftPage} pageSize={draftPageSize} total={draftTotal} filters={route.postFilters} onselect={(id) => navigate("posts", id)} onfilters={updatePostFilters} onimport={() => importDialogOpen = true} /><PostEditorView resourceId={currentPostId} {mediaInsert} {mediaCover} onupdated={updateDraft} ondeleted={deleteDraft} oncreated={(id) => navigate("posts", id)} onmedia={() => navigate("media")} onerror={(message) => error = message} onnotice={(message) => notice = message} ondirtychange={(dirty) => editorDirty = dirty} /></section>
+			{#if route.view === "media"}<MediaView onerror={(message) => error = message} onnotice={(message) => notice = message} onstate={(state) => { mediaCount = state.count; mediaUnavailable = state.unavailable; }} oninsert={insertMedia} oncover={setCover} />{/if}
+			{:else if route.view === "media"}<MediaView onerror={(message) => error = message} onnotice={(message) => notice = message} onstate={(state) => { mediaCount = state.count; mediaUnavailable = state.unavailable; }} oninsert={insertMedia} oncover={setCover} />
+			{:else if route.view === "pages"}<PagesView initialPageKey={route.resourceId} onerror={(message) => error = message} onnotice={(message) => notice = message} ondirtychange={(dirty) => pagesDirty = dirty} />
+			{:else if route.view === "friends" || route.view === "gallery" || route.view === "announcement" || route.view === "sponsor" || route.view === "tools"}<StructuredConfigEditor groupKey={route.view} onerror={(message) => error = message} onnotice={(message) => notice = message} ondirtychange={(dirty) => pagesDirty = dirty} />
+			{:else if route.view === "settings"}<SettingsView onerror={(message) => error = message} onnotice={(message) => notice = message} />
+			{:else if route.view === "publishing"}<PublishingView onerror={(message) => error = message} onnotice={(message) => notice = message} onopenpost={(id) => navigate("posts", id)} />
+			{:else}<SecurityView onerror={(message) => error = message} onnotice={(message) => notice = message} />{/if}
+		</AdminShell>
 	{#if importDialogOpen}<PostImportDialog onclose={() => importDialogOpen = false} onimported={importDraft} onerror={(message) => error = message} />{/if}
 {/if}

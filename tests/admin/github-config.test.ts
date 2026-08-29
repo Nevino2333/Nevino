@@ -60,15 +60,19 @@ test("GitHub compare 返回 identical 和 ahead 关系", async () => {
 	}
 });
 
-test("workflow 回调配置缺失时明确失败而不是跳过", async () => {
+test("workflow 回调始终运行并携带专用 secret", async () => {
 	const workflow = await readFile(
 		new URL("../../.github/workflows/cloudflare-pages.yml", import.meta.url),
 		"utf8",
 	);
-	assert.match(workflow, /name: Validate deployment callback configuration/);
+	assert.match(workflow, /name: Notify admin deployment callback/);
 	assert.match(workflow, /if: \$\{\{ always\(\) \}\}/);
-	assert.match(workflow, /DEPLOYMENT_CALLBACK_URL is required/);
-	assert.match(workflow, /DEPLOYMENT_CALLBACK_SECRET is required/);
+	assert.match(workflow, /CALLBACK_URL: \$\{\{ secrets\.DEPLOYMENT_CALLBACK_URL \}\}/);
+	assert.match(
+		workflow,
+		/CALLBACK_SECRET: \$\{\{ secrets\.DEPLOYMENT_CALLBACK_SECRET \}\}/,
+	);
+	assert.match(workflow, /X-Deployment-Callback-Secret: \$CALLBACK_SECRET/);
 	assert.doesNotMatch(
 		workflow,
 		/always\(\) && env\.CALLBACK_URL != '' && env\.CALLBACK_SECRET != ''/,

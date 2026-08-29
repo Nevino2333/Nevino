@@ -9,6 +9,7 @@ import type {
 import {
 	canApplySaveResult,
 	canPublishEditor,
+	canReconcilePublishTask,
 	canRecoverDeploymentWait,
 	confirmDestructiveEditorAction,
 	pollPublishTaskWithRetry,
@@ -47,6 +48,7 @@ let loading = $state(false);
 let saving = $state(false);
 let discarding = $state(false);
 let recovering = $state(false);
+let reconciling = $state(false);
 let editorMode = $state<"write" | "preview">("write");
 let publishTask = $state<PublishTask | null>(null);
 let conflict = $state(false);
@@ -374,6 +376,23 @@ async function recoverDeploymentWait() {
 	}
 }
 
+async function reconcilePublishTask() {
+	if (!publishTask || !canReconcilePublishTask(publishTask.status)) return;
+	reconciling = true;
+	try {
+		await adminRequest<PublishTask>(
+			`/publish-tasks/${encodeURIComponent(publishTask.id)}/reconcile`,
+			{ method: "POST" },
+		);
+		if (draft) await loadDraft(draft.id);
+		onnotice("发布证据已对账，任务恢复等待部署");
+	} catch (cause) {
+		onerror(cause instanceof Error ? cause.message : "发布对账失败");
+	} finally {
+		reconciling = false;
+	}
+}
+
 async function discardRevision() {
 	if (
 		!draft?.capabilities.discardable ||
@@ -424,7 +443,7 @@ $effect(() => {
 	{#if loading}<div class="admin-state"><span class="admin-spinner"></span><p>正在加载文章详情…</p></div>{:else}
 		<div class="admin-editor-head"><div><p class="admin-kicker">{isNew ? "NEW DRAFT" : "EDIT POST"}</p><h2>{isNew ? "新建文章" : (draft?.title || "编辑文章")}</h2><div class="admin-save-meta"><span class:admin-unsaved={isDirty}><span class="admin-status-dot"></span>{isDirty ? "有未保存更改" : "所有更改已保存"}</span><span>上次保存 {formatSavedAt(lastSavedAt)}</span>{#if draft?.publicationState === "published"}<span class:admin-unsaved={draft.syncStatus === "modified"}>{draft.syncStatus === "modified" ? "未发布修订" : "线上版本"}</span>{/if}</div></div><div class="admin-actions"><button class="admin-button admin-button-primary" disabled={saving || discarding || !title.trim() || (draft !== null && !draft.capabilities.editable)} onclick={saveDraft}>{saving ? "处理中…" : "保存"}</button>{#if !isNew}<button class="admin-button admin-button-ghost" disabled={saving || discarding || isDirty || !draft?.capabilities.publishable || publishBusy} onclick={publishDraft}>{publishBusy ? "发布中…" : "发布"}</button>{#if draft?.capabilities.discardable}<button class="admin-button admin-button-ghost" disabled={saving || discarding || isDirty} onclick={discardRevision}>{discarding ? "恢复中…" : "放弃修订"}</button>{/if}{/if}</div></div>
 		{#if conflict}<div class="admin-inline-state admin-content-conflict" role="alert"><span>!</span><div><strong>版本冲突</strong><p>服务器上的文章版本已更新。请重新加载后合并更改。</p><button onclick={reloadDraft}>重新加载最新版本</button></div></div>{/if}
-		{#if publishTask}<div class="admin-publish-status admin-publish-{publishTask.status}" role="status"><strong>发布状态：{publishTask.status}</strong><span>{publishTask.targetPath || "正在确定发布路径"}</span>{#if canRecoverDeploymentWait(publishTask.status)}<button class="admin-button admin-button-danger" disabled={recovering} onclick={recoverDeploymentWait}>{recovering ? "解除中…" : "解除等待"}</button>{/if}</div>{/if}
+		{#if publishTask}<div class="admin-publish-status admin-publish-{publishTask.status}" role="status"><strong>发布状态：{publishTask.status}</strong><span>{publishTask.targetPath || "正在确定发布路径"}</span>{#if canRecoverDeploymentWait(publishTask.status)}<button class="admin-button admin-button-danger" disabled={recovering} onclick={recoverDeploymentWait}>{recovering ? "解除中…" : "解除等待"}</button>{/if}{#if canReconcilePublishTask(publishTask.status)}<button class="admin-button" disabled={reconciling} onclick={reconcilePublishTask}>{reconciling ? "对账中…" : "重新对账"}</button>{/if}</div>{/if}
 		<div class="admin-section-heading"><div><p class="admin-kicker">METADATA</p><h3>文章信息</h3></div><span class="admin-hint">标题为必填项</span></div>
 		<div class="admin-fields"><label class="admin-field-wide">标题<input bind:value={title} placeholder="文章标题" required /></label><label>Slug<input bind:value={slug} disabled={draft?.publicationState === "published"} placeholder="可选，例如 my-first-post" />{#if draft?.publicationState === "published"}<small>线上文章请使用下方重命名操作。</small>{/if}</label><label>语言<input bind:value={lang} placeholder="zh-CN" /></label><label>发布日期<input type="date" bind:value={published} required /></label><label>更新日期<input type="date" bind:value={updated} /></label><label class="admin-field-wide">描述<textarea bind:value={description} rows="3" placeholder="用于列表和分享卡片的文章摘要"></textarea></label><label class="admin-field-wide">AI 摘要<textarea bind:value={aiSummary} rows="3" placeholder="文章的 AI 摘要，可留空"></textarea></label><label class="admin-field-wide">封面图<div class="admin-cover-field"><input bind:value={image} placeholder="/media/cover.webp 或 https://…" /><button type="button" onclick={onmedia}>从媒体库选择</button></div></label><label>标签<input bind:value={tags} placeholder="多个标签用逗号分隔" /></label><label>分类<input bind:value={category} placeholder="文章分类" /></label><label>作者<input bind:value={author} placeholder="文章作者，可留空" /></label><label>来源链接<input type="url" bind:value={sourceLink} placeholder="https://…" /></label><label>许可名称<input bind:value={licenseName} placeholder="例如 CC BY-NC-SA 4.0" /></label><label>许可链接<input type="url" bind:value={licenseUrl} placeholder="https://…" /></label><div class="admin-field-wide admin-switches"><label class="admin-checkbox"><input type="checkbox" bind:checked={pinned} /><span>置顶文章<small>在文章列表中优先展示</small></span></label><label class="admin-checkbox"><input type="checkbox" bind:checked={comment} /><span>开启评论<small>允许读者在文章下留言</small></span></label></div></div>
 		<div class="admin-section-heading admin-writing-heading"><div><p class="admin-kicker">COMPOSE</p><h3>正文内容</h3></div><span class="admin-hint">Markdown · {content.length} 字符</span></div>

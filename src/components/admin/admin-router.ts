@@ -6,10 +6,18 @@ const adminViews = new Set<AdminView>([
 	"posts",
 	"media",
 	"pages",
+	"friends",
+	"gallery",
+	"announcement",
+	"sponsor",
+	"tools",
 	"settings",
 	"publishing",
 	"security",
 ]);
+
+// 页面视图通过 id 携带 page key；内容分组视图固定分组无需 id
+const viewsWithResourceId = new Set<AdminView>(["posts", "pages"]);
 
 export function parseAdminRoute(input: string | URL): AdminRoute {
 	const url = input instanceof URL ? input : new URL(input, "http://localhost");
@@ -19,7 +27,9 @@ export function parseAdminRoute(input: string | URL): AdminRoute {
 		: "dashboard";
 	return {
 		view,
-		resourceId: view === "posts" ? url.searchParams.get("id") : null,
+		resourceId: viewsWithResourceId.has(view)
+			? url.searchParams.get("id")
+			: null,
 		postFilters: parsePostFilterState(url),
 	};
 }
@@ -27,7 +37,8 @@ export function parseAdminRoute(input: string | URL): AdminRoute {
 export function formatAdminUrl(route: AdminRoute): string {
 	const search = new URLSearchParams();
 	search.set("view", route.view);
-	if (route.resourceId) search.set("id", route.resourceId);
+	if (route.resourceId && viewsWithResourceId.has(route.view))
+		search.set("id", route.resourceId);
 	if (route.view === "posts") appendPostFilters(search, route.postFilters);
 	return `/admin/?${search.toString()}`;
 }

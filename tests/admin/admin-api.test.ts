@@ -9,8 +9,11 @@ test("写请求自动附加 CSRF 并解包统一成功响应", async () => {
 	const requests: { input: string; init?: RequestInit }[] = [];
 	const client = createAdminClient(async (input, init) => {
 		requests.push({ input: String(input), init });
-		if (String(input).endsWith("/csrf")) {
-			return Response.json({ data: { csrfToken: "token-1" }, requestId: "r1" });
+		if (String(input).endsWith("/session")) {
+			return Response.json({
+				data: { authenticated: true, csrfToken: "token-1" },
+				requestId: "r1",
+			});
 		}
 		return Response.json({ data: { saved: true }, requestId: "r2" });
 	});

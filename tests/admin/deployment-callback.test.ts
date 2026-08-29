@@ -175,6 +175,9 @@ test("Repository 在 batch 任一 change 非 1 时补偿为 reconciliation_requi
 						statement.bindings = bindings;
 						return this;
 					},
+					async first() {
+						return task();
+					},
 					async run() {
 						return { meta: { changes: 1 } };
 					},
@@ -193,11 +196,14 @@ test("Repository 在 batch 任一 change 非 1 时补偿为 reconciliation_requi
 			"2026-08-27T02:00:00.000Z",
 		);
 		assert.equal(result, "partial");
-		assert.equal(statements.length, 3);
-		assert.match(statements[1].sql, /version = \?/);
-		assert.match(statements[1].sql, /commit_sha = \?/);
-		assert.match(statements[1].sql, /sync_status = 'publishing'/);
-		assert.deepEqual(statements[1].bindings, [
+		// [0] get 读取任务、[1] 任务终态、[2] 草稿证据、[3] 补偿
+		assert.equal(statements.length, 4);
+		assert.match(statements[2].sql, /version = \?/);
+		assert.match(statements[2].sql, /commit_sha = \?/);
+		assert.match(statements[2].sql, /sync_status = 'publishing'/);
+		assert.deepEqual(statements[2].bindings, [
+			"src/content/posts/hello-world/index.md",
+			"blob-1",
 			"2026-08-27T02:00:00.000Z",
 			"2026-08-27T02:00:00.000Z",
 			"task-1",
@@ -205,8 +211,8 @@ test("Repository 在 batch 任一 change 非 1 时补偿为 reconciliation_requi
 			4,
 			"commit-1",
 		]);
-		assert.match(statements[2].sql, /reconciliation_required/);
-		assert.deepEqual(statements[2].bindings, [
+		assert.match(statements[3].sql, /reconciliation_required/);
+		assert.deepEqual(statements[3].bindings, [
 			"deployment_completion_partial",
 			"deployment_completion_partial",
 			"2026-08-27T02:00:00.000Z",
@@ -338,16 +344,15 @@ test("Cloudflare 工作流使用单一 always 回调覆盖所有 job 结果", as
 		"utf8",
 	);
 	assert.equal(
-		(workflow.match(/name: Report deployment result/g) ?? []).length,
+		(workflow.match(/name: Notify admin deployment callback/g) ?? []).length,
 		1,
 	);
 	assert.doesNotMatch(workflow, /name: Report build failure/);
 	assert.match(workflow, /cancel-in-progress: false/);
-	assert.match(workflow, /if: \$\{\{ always\(\)/);
+	assert.match(workflow, /if: \$\{\{ always\(\) \}\}/);
 	assert.match(workflow, /JOB_STATUS: \$\{\{ job\.status \}\}/);
 	assert.match(workflow, /case "\$JOB_STATUS" in/);
 	assert.match(workflow, /success\) OUTCOME="success"/);
-	assert.match(workflow, /failure\|cancelled\) OUTCOME="failure"/);
 	assert.match(workflow, /\*\) OUTCOME="failure"/);
 });
 

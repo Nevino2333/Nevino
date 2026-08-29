@@ -314,3 +314,28 @@ pnpm build
 - 后台不暴露任意代码、路径、SQL 或 Secret 编辑能力。
 - 公开博客继续通过 Cloudflare Pages 静态构建稳定访问。
 - 后台模块边界清晰，新增内容字段或配置类型只需扩展对应 Schema、服务和表单模块。
+
+## 落地状态（2026-08-28）
+
+### 已交付（阶段一~五）
+
+- 阶段一/二（此前完成）：安全基础、发布状态机、完整文章管理、媒体库（R2）。
+- 阶段三：独立页面管理（about/guestbook/friends.mdx，`admin_pages` + `admin_page_revisions`，暂存/发布/历史/恢复）；内容分组管理：友链、相册、公告、赞助、工具页（`src/config/toolsConfig.ts` 由 tools.astro 抽取）。
+- 阶段四：站点设置管理：站点信息、个人资料、评论系统、访问统计、版权许可、页脚（含 FooterConfig.html 整文件）；D1 变更集（`admin_config_state` 暂存 + `admin_config_history` 版本恢复）；逐分组差异预览；多文件单次树提交批量发布（`commitGitHubFiles`）。
+- 阶段五：发布中心（任务/内容操作列表 + workflow_dispatch 一键重建 `POST /api/admin/deployments/trigger`）；安全审计（改密码 `PUT /api/admin/password` 含重认证与全端吊销、会话列表/吊销、审计日志分页查询）；仪表盘接入 `/api/admin/overview` 聚合。
+- 关键机制：`_shared/allowed-paths.ts` 统一 GitHub 路径白名单（文章 slug 模式 + spec 页面 + 配置文件精确清单）；`_shared/config/json-like.ts` 纯数据字面量解析与原位补丁（保留注释/排版，尾逗号兼容，`$ref` 标识符只读呈现）；`_shared/config/registry.ts` 分组注册表（字段元数据同时驱动服务端校验与前端表单）。
+- 测试：`tests/admin/json-like.test.ts`、`tests/admin/config-registry.test.ts`（对真实配置文件做解析/幂等补丁/校验往返），并修复了 5 个此前失败的存量测试；全套 181 用例通过。
+
+### 本轮明确不纳入后台（仍为手工/外部管理）
+
+- navBarConfig（代码驱动生成）、sidebarConfig、backgroundWallpaper、musicConfig、fontConfig、effectsConfig、pioConfig、homePortfolioIntro、coverImageConfig、expressiveCodeConfig、plantumlConfig 等代码结构性配置。
+- 相册照片文件（仍需放入 `public/gallery/<id>/`），相册元数据已可管理。
+- 更新日志（notice.html + changelog.astro 元数据需手工配对维护）。
+- Waline/Giscus 评论内容管理（外部服务侧）；Umami 统计后台。
+- i18n 语言文件。
+
+### 运维注意
+
+- 新增迁移 `migrations/0014_admin_pages_configs.sql`，部署后需对生产 D1 执行 `wrangler d1 migrations apply nevino-admin --remote`。
+- `pnpm admin:dev` 已修正：不再传与 wrangler.jsonc 冲突的 `--d1` 旗标（该旗标会遮蔽配置内的 DB 绑定，导致运行时 `env.DB` 为 undefined）。
+- 部署触发器依赖 `GITHUB_TOKEN` 具备 `actions:write`（cloudflare-pages.yml 支持 workflow_dispatch）。

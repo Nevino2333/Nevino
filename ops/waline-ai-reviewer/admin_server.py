@@ -30,6 +30,12 @@ from pathlib import Path
 from string import Template
 from typing import Any
 
+def render_template_page(template: Template, **values: str) -> str:
+	"""渲染管理页模板。string.Template 仅做 $ 占位替换，值不会再次求值；
+	使用 safe_substitute 使未知占位符保持原样而不抛错。"""
+	return template.safe_substitute(**values)
+
+
 from admin_password import atomic_write, load_password_record, save_password, verify_password, verify_username
 from reviewer import BOT_VERSION, MAX_PUBLIC_REPLY_CHARS, PUBLIC_REPLY_DISCLAIMER, normalize_path, plain_text
 
@@ -1114,7 +1120,7 @@ class AdminHandler(BaseHTTPRequestHandler):
 				comment_feed_notice = "暂时没有可回复的已审核评论，请先让 Waline 完成审核，或直接填写评论 ID。"
 		except (OSError, UnicodeError, ValueError, json.JSONDecodeError, sqlite3.Error) as error:
 			comment_feed_notice = f"评论列表暂不可用：{error} 可直接填写评论 ID，或稍后刷新。"
-		page = self.server.application.template.substitute(
+		page = render_template_page(self.server.application.template,
 			csrf=html.escape(session.csrf, quote=True),
 			notice_html=notice_html,
 			enabled_checked="checked" if settings["enabled"] else "",

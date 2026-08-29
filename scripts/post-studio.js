@@ -421,10 +421,18 @@ function normalizePostPath(fileName, mdx = false) {
 	let normalized = String(fileName || "").trim().replaceAll("\\", "/");
 	normalized = normalized.replace(/^\/+/, "");
 	if (!normalized) throw new Error("请填写文件路径");
+	if (normalized.includes("\0")) throw new Error("文件路径包含非法字符");
+	if (normalized.split("/").includes("..")) {
+		throw new Error("文件路径必须位于 src/content/posts 内");
+	}
 	if (!/\.(md|mdx)$/i.test(normalized)) normalized += mdx ? ".mdx" : ".md";
 	const target = path.resolve(postsRoot, normalized);
 	const relative = path.relative(postsRoot, target);
-	if (relative.startsWith("..") || path.isAbsolute(relative)) {
+	if (
+		relative === "" ||
+		relative.startsWith("..") ||
+		path.isAbsolute(relative)
+	) {
 		throw new Error("文件路径必须位于 src/content/posts 内");
 	}
 	return relative.replaceAll("\\", "/");

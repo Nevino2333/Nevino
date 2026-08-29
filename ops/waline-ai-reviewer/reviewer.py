@@ -32,6 +32,16 @@ from typing import Any
 LOG = logging.getLogger("waline-ai-reviewer")
 BEIJING = timezone(timedelta(hours=8), name="Asia/Shanghai")
 BOT_VERSION = "1.1.1"
+
+
+def validate_http_url(request):
+	"""校验请求目标仅使用 http/https 协议（URL 来自服务端配置，防御协议混用）；
+	校验通过时原样返回 Request 以保留其 headers。"""
+	url = request if isinstance(request, str) else request.full_url
+	parsed = urllib.parse.urlparse(str(url))
+	if parsed.scheme not in ("http", "https"):
+		raise ValueError(f"refusing to request non-http URL: {parsed.scheme!r}")
+	return request
 MAX_PUBLIC_REPLY_CHARS = 280
 PUBLIC_REPLY_DISCLAIMER = (
 	"本信息由Ai自动理解后调用ChatGPT 5.6 Sol Chat（没脑子的）模式下的自动回复，"
@@ -577,7 +587,7 @@ class Reviewer:
 				url,
 				headers={"User-Agent": f"Rainzt-Waline-AI-Reviewer/{BOT_VERSION}"},
 			)
-			with urllib.request.urlopen(req, timeout=15) as response:
+			with urllib.request.urlopen(validate_http_url(req), timeout=15) as response:
 				content_type = response.headers.get_content_type()
 				if content_type not in {"text/html", "application/xhtml+xml"}:
 					raise ValueError(f"page context is not HTML: {content_type}")
@@ -660,7 +670,7 @@ class Reviewer:
 			method="POST",
 		)
 		try:
-			with urllib.request.urlopen(req, timeout=45) as response:
+			with urllib.request.urlopen(validate_http_url(req), timeout=45) as response:
 				result = json.load(response)
 		except urllib.error.HTTPError as exc:
 			body = exc.read(4096).decode("utf-8", "replace")
@@ -747,7 +757,7 @@ class Reviewer:
 			},
 			method="POST",
 		)
-		with urllib.request.urlopen(req, timeout=20) as response:
+		with urllib.request.urlopen(validate_http_url(req), timeout=20) as response:
 			result = json.load(response)
 		if result.get("errno") not in {None, 0}:
 			raise RuntimeError(f"Waline rejected reply: {result.get('errmsg') or result.get('errno')}")
@@ -948,7 +958,7 @@ class Reviewer:
 			f"{self.config.waline_base_url}/",
 			headers={"Origin": self.config.site_origin, "Referer": f"{self.config.site_origin}/"},
 		)
-		with urllib.request.urlopen(req, timeout=10) as response:
+		with urllib.request.urlopen(validate_http_url(req), timeout=10) as response:
 			if response.status != 200:
 				raise RuntimeError(f"Waline health probe returned {response.status}")
 		if probe_ai:
@@ -968,7 +978,7 @@ class Reviewer:
 				headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
 				method="POST",
 			)
-			with urllib.request.urlopen(req, timeout=45) as response:
+			with urllib.request.urlopen(validate_http_url(req), timeout=45) as response:
 				result = json.load(response)
 			message = ((result.get("choices") or [{}])[0].get("message") or {})
 			if not message.get("content"):

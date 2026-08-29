@@ -1,21 +1,12 @@
 import { audit, bestEffortAudit } from "../_shared/audit";
 import { readJson } from "../_shared/body";
-import { getUserById } from "../_shared/db";
 import { ApiError } from "../_shared/errors";
-import {
-	commitGitHubDelete,
-	decodeGitHubContent,
-	getGitHubConfig,
-	getGitHubFileAtRef,
-	getGitHubHead,
-} from "../_shared/github";
 import { adminGet, adminMutation } from "../_shared/handler";
 import { toMarkdown } from "../_shared/markdown";
 import { ContentOperationRepository } from "../_shared/repositories/content-operation-repository";
 import { DraftRepository } from "../_shared/repositories/draft-repository";
 import { PublishTaskRepository } from "../_shared/repositories/publish-task-repository";
-import { randomToken, verifyPassword } from "../_shared/security";
-import { ContentOperationService } from "../_shared/services/content-operation-service";
+import { randomToken } from "../_shared/security";
 import {
 	assertDeletable,
 	assertEditable,
@@ -205,107 +196,5 @@ export const onRequestDelete = adminMutation(async (context) => {
 		);
 		return { deleted: true };
 	}
-	if (publicationState !== "published" && publicationState !== "withdrawn")
-		throw new ApiError(409, "delete_state_conflict", "文章状态不允许删除");
-	if (
-		typeof body.password !== "string" ||
-		typeof body.idempotencyKey !== "string"
-	)
-		throw new ApiError(
-			403,
-			"delete_reauthentication_required",
-			"删除已发布内容需要重新认证",
-		);
-	const user = await getUserById(context.env, context.session.user_id);
-	if (!user || !(await verifyPassword(body.password, user.password_hash)))
-		throw new ApiError(401, "delete_reauthentication_failed", "重新认证失败");
-	const activePublish = await publishTasks.findActiveByDraftId(id);
-	if (activePublish)
-		throw new ApiError(409, "content_operation_active", "文章已有活动操作");
-	const config = getGitHubConfig(context.env);
-	if (!config)
-		throw new ApiError(503, "github_not_configured", "GitHub 尚未配置", true);
-	const service = new ContentOperationService({
-		store: {
-			getDraft: (draftId) => repository.get(draftId),
-			findByIdempotencyKey: (key) => operations.findByIdempotencyKey(key),
-			findByPath: (path) => repository.findByPath(path),
-			findBySlug: (slug) => repository.findBySlug(slug),
-			createPending: (row) => operations.createPending(row),
-			importPublished: (draft, revision) =>
-				repository.importPublished(draft, revision),
-			markGitHubCommitted: (operationId, now, blobSha, commitSha) =>
-				operations.markGitHubCommitted(operationId, now, blobSha, commitSha),
-			markReconciliationRequired: (
-				operationId,
-				now,
-				blobSha,
-				commitSha,
-				errorCode,
-			) =>
-				operations.markReconciliationRequired(
-					operationId,
-					now,
-					blobSha,
-					commitSha,
-					errorCode,
-				),
-			markCompleted: (operationId, now, blobSha, commitSha) =>
-				operations.markCompleted(operationId, now, blobSha, commitSha),
-		},
-		gateway: {
-			getHead: () => getGitHubHead(config),
-			getFile: async (path, ref) => {
-				try {
-					const file = await getGitHubFileAtRef(config, path, ref);
-					const markdown = decodeGitHubContent(file);
-					if (markdown === null)
-						throw new ApiError(
-							502,
-							"github_read_failed",
-							"GitHub 文件格式无效",
-						);
-					return { sha: file.sha, content: markdown };
-				} catch (error) {
-					if (error instanceof ApiError && error.status === 404) return null;
-					throw error;
-				}
-			},
-			deleteFile: async (input) =>
-				commitGitHubDelete(
-					config,
-					input.path,
-					input.expectedHeadCommitSha,
-					`Delete ${current.slug}`,
-				),
-		},
-		now: () => new Date().toISOString(),
-		newId: () => randomToken(16),
-	});
-	const operation = await service.deletePost({
-		draftId: id,
-		expectedVersion: body.expectedVersion as number,
-		idempotencyKey: body.idempotencyKey,
-		userId: context.session.user_id,
-	});
-	await bestEffortAudit(() =>
-		audit(
-			context.env,
-			context.session.user_id,
-			"post_delete",
-			context.request,
-			{
-				requestId: context.requestId,
-				resourceType: "content_operation",
-				resourceId: operation.id,
-				result: "success",
-				metadata: {
-					mode: "github",
-					operationId: operation.id,
-					commitSha: operation.commit_sha,
-				},
-			},
-		),
-	);
-	return operation;
+	throw new ApiError(409, "delete_state_conflict", "文章状态不允许删除");
 });

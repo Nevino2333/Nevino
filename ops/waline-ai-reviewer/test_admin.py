@@ -1,5 +1,6 @@
 import http.client
 import json
+import secrets
 import re
 import sqlite3
 import tempfile
@@ -115,7 +116,7 @@ class AdminPrimitiveTests(unittest.TestCase):
 				"port": 465,
 				"secure": True,
 				"user": "mailer@example.com",
-				"password": "server-only-secret",
+				"password": secrets.token_urlsafe(12),
 				"sender_email": "mailer@example.com",
 				"author_email": "owner@example.com",
 			}), encoding="utf-8")
@@ -184,7 +185,7 @@ class AdminHTTPTests(unittest.TestCase):
 			"port": 465,
 			"secure": True,
 			"user": "mailer@example.com",
-			"password": "server-only-secret",
+			"password": secrets.token_urlsafe(12),
 			"sender_email": "mailer@example.com",
 		}), encoding="utf-8")
 		save_password(self.password, "correct horse battery", "test-admin")

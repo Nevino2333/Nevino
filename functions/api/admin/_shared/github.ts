@@ -1,9 +1,8 @@
+import { isAllowedGitHubPath } from "./allowed-paths";
 import { ApiError } from "./errors";
 import type { DraftRow, Env } from "./types";
 
 const apiBase = "https://api.github.com";
-const pathPattern =
-	/^src\/content\/posts\/[a-z0-9]+(?:-[a-z0-9]+)*\/index\.md$/;
 const commitShaPattern = /^[0-9a-f]{40}$/i;
 
 export type GitHubConfig = {
@@ -75,8 +74,7 @@ export const getGitHubConfig = (env: Env): GitHubConfig | null => {
 
 export const githubPathForDraft = (draft: DraftRow): string =>
 	`src/content/posts/${draft.slug}/index.md`;
-export const isAllowedGitHubPath = (path: string): boolean =>
-	pathPattern.test(path);
+export { isAllowedGitHubPath };
 
 const repositoryUrl = (config: GitHubConfig, path: string): URL =>
 	new URL(
@@ -469,5 +467,130 @@ export const decodeGitHubContent = (content: GitHubContent): string | null => {
 		);
 	} catch {
 		return null;
+	}
+};
+
+// 一次树提交写入多个文本文件（设置批量发布）。
+// 每个 change 携带期望的 blob sha，任何远端漂移都会在提交前暴露。
+export const commitGitHubFiles = async (
+	config: GitHubConfig,
+	changes: { path: string; content: string; expectedBlobSha: string }[],
+	expectedHeadCommitSha: string,
+	message: string,
+): Promise<{ commitSha: string }> => {
+	if (changes.length === 0)
+		throw new ApiError(400, "invalid_request", "没有可提交的文件变更");
+	const head = await getGitHubHead(config);
+	if (head !== expectedHeadCommitSha)
+		throw new ApiError(409, "github_head_changed", "GitHub HEAD 已变化");
+	const verified: { path: string; sha: string }[] = [];
+	for (const change of changes) {
+		if (!change.expectedBlobSha.trim())
+			throw new ApiError(400, "expected_sha_required", "expected SHA 必填");
+		const current = await getGitHubFileAtRef(
+			config,
+			change.path,
+			expectedHeadCommitSha,
+		);
+		if (current.sha !== change.expectedBlobSha)
+			throw new ApiError(
+				409,
+				"content_blob_conflict",
+				"远端内容已变化，请刷新后重试",
+			);
+		verified.push({ path: change.path, sha: "__new__" });
+	}
+	const blobs: string[] = [];
+	for (const change of changes) {
+		const blobUrl = repositoryUrl(config, "git/blobs");
+		const blob = await json<{ sha?: string }>(
+			await fetch(blobUrl, {
+				method: "POST",
+				headers: headers(config, true),
+				body: JSON.stringify({ content: change.content, encoding: "utf-8" }),
+			}),
+			"write",
+		);
+		blobs.push(blob.sha ?? "");
+	}
+	const tree = verified.map((change, index) => ({
+		path: change.path,
+		sha: blobs[index],
+	}));
+	const commitUrl = repositoryUrl(
+		config,
+		`git/commits/${encodeURIComponent(expectedHeadCommitSha)}`,
+	);
+	const base = await json<{ tree?: { sha?: string } }>(
+		await fetch(commitUrl, { headers: headers(config) }),
+		"read",
+	);
+	const treeUrl = repositoryUrl(config, "git/trees");
+	const treeResult = await json<{ sha?: string }>(
+		await fetch(treeUrl, {
+			method: "POST",
+			headers: headers(config, true),
+			body: JSON.stringify({
+				base_tree: base.tree?.sha,
+				tree: tree.map((change) => ({
+					...change,
+					mode: "100644",
+					type: "blob",
+				})),
+			}),
+		}),
+		"write",
+	);
+	const newCommit = await json<{ sha?: string }>(
+		await fetch(repositoryUrl(config, "git/commits"), {
+			method: "POST",
+			headers: headers(config, true),
+			body: JSON.stringify({
+				message,
+				parents: [expectedHeadCommitSha],
+				tree: treeResult.sha,
+			}),
+		}),
+		"write",
+	);
+	const update = await fetch(
+		repositoryUrl(
+			config,
+			`git/refs/heads/${encodeURIComponent(config.branch)}`,
+		),
+		{
+			method: "PATCH",
+			headers: headers(config, true),
+			body: JSON.stringify({ sha: newCommit.sha, force: false }),
+		},
+	);
+	await json(update, "write");
+	return { commitSha: newCommit.sha ?? "" };
+};
+
+// 通过 workflow_dispatch 触发 Cloudflare Pages 部署工作流重新构建。
+export const dispatchGitHubWorkflow = async (
+	config: GitHubConfig,
+	workflowFile: string,
+): Promise<void> => {
+	if (!/^[A-Za-z0-9_./-]+\.ya?ml$/.test(workflowFile))
+		throw new ApiError(400, "invalid_request", "工作流文件名无效");
+	const url = repositoryUrl(
+		config,
+		`actions/workflows/${encodeURIComponent(workflowFile)}/dispatches`,
+	);
+	const response = await fetch(url, {
+		method: "POST",
+		headers: headers(config, true),
+		body: JSON.stringify({ ref: config.branch }),
+	});
+	if (!response.ok) {
+		if (response.status === 403 || response.status === 404)
+			throw new ApiError(
+				403,
+				"github_workflow_not_allowed",
+				"GITHUB_TOKEN 没有触发工作流的权限（需要 actions:write）",
+			);
+		throw githubError(response.status, "write");
 	}
 };

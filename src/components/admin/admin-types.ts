@@ -3,6 +3,11 @@ export type AdminView =
 	| "posts"
 	| "media"
 	| "pages"
+	| "friends"
+	| "gallery"
+	| "announcement"
+	| "sponsor"
+	| "tools"
 	| "settings"
 	| "publishing"
 	| "security";
@@ -243,4 +248,243 @@ export type MediaAsset = {
 	mime_type: string;
 	size: number;
 	created_at: string;
+};
+
+// ---------------------------------------------------------------------------
+// 结构化配置（站点设置与内容分组）
+// ---------------------------------------------------------------------------
+
+export type ConfigFieldMeta =
+	| {
+			key: string;
+			type: "text" | "textarea" | "url" | "image" | "color";
+			label: string;
+			help?: string;
+			required?: boolean;
+			maxLength?: number;
+			placeholder?: string;
+			urlPrefixes?: string[];
+	  }
+	| {
+			key: string;
+			type: "number";
+			label: string;
+			help?: string;
+			min?: number;
+			max?: number;
+			integer?: boolean;
+	  }
+	| { key: string; type: "boolean"; label: string; help?: string }
+	| {
+			key: string;
+			type: "select";
+			label: string;
+			help?: string;
+			options: { value: string; label: string }[];
+	  }
+	| {
+			key: string;
+			type: "tags";
+			label: string;
+			help?: string;
+			maxItems?: number;
+	  }
+	| {
+			key: string;
+			type: "list";
+			label: string;
+			help?: string;
+			itemLabelKey: string;
+			fields: ConfigFieldMeta[];
+			defaultItem: Record<string, unknown>;
+			maxItems?: number;
+			addable?: boolean;
+	  };
+
+export type ConfigFieldBinding = {
+	id: string;
+	block: string;
+	path: (string | number)[];
+	field: ConfigFieldMeta;
+};
+
+export type SettingsGroupStatus = {
+	key: string;
+	label: string;
+	section: "content" | "settings";
+	description: string;
+	filePath: string;
+	version: number;
+	staged: boolean;
+	stale: boolean;
+	stagedAt: string | null;
+	parseError: string | null;
+	deployedCommitSha: string | null;
+	deployedAt: string | null;
+};
+
+export type SettingsGroupDetail = SettingsGroupStatus & {
+	values: Record<string, unknown>;
+	baseValues: Record<string, unknown>;
+	code: Record<string, string>;
+	baseCode: Record<string, string>;
+	fields: ConfigFieldBinding[];
+	codeFiles: {
+		id: string;
+		path: string;
+		label: string;
+		help?: string;
+		maxLength: number;
+	}[];
+};
+
+export type SettingsDiffFile = {
+	path: string;
+	before: string;
+	after: string;
+	diff: DiffLine[];
+};
+
+export type SettingsDiff = {
+	key: string;
+	label: string;
+	files: SettingsDiffFile[];
+};
+
+export type SettingsHistoryItem = {
+	id: string;
+	version: number;
+	commitSha: string | null;
+	createdAt: string;
+};
+
+export type SettingsPublishResult = {
+	commitSha: string;
+	published: { key: string; label: string; changed: string[] }[];
+	unchanged: { key: string; label: string }[];
+};
+
+// ---------------------------------------------------------------------------
+// 独立页面
+// ---------------------------------------------------------------------------
+
+export type SpecPageStatus = {
+	key: string;
+	label: string;
+	description: string;
+	filePath: string;
+	version: number;
+	staged: boolean;
+	stagedAt: string | null;
+	deployedCommitSha: string | null;
+	deployedAt: string | null;
+};
+
+export type SpecPageDetail = SpecPageStatus & {
+	content: string;
+	baseContent: string;
+	stale: boolean;
+};
+
+export type SpecPageHistoryItem =
+	| {
+			type: "commit";
+			id: string;
+			message: string;
+			authorName: string;
+			date: string;
+	  }
+	| {
+			type: "revision";
+			id: string;
+			source: string;
+			version: number;
+			date: string;
+	  };
+
+export type SpecPageHistoryDetail = {
+	type: "commit" | "revision";
+	id: string;
+	date: string;
+	source?: string;
+	message?: string;
+	diff: DiffLine[];
+	after: string;
+};
+
+// ---------------------------------------------------------------------------
+// 发布中心 / 安全 / 仪表盘
+// ---------------------------------------------------------------------------
+
+export type PublishTaskRow = {
+	id: string;
+	idempotency_key: string;
+	draft_id: string;
+	expected_version: number;
+	target_path: string;
+	status: string;
+	attempts: number;
+	github_blob_sha: string | null;
+	github_commit_sha: string | null;
+	error_code: string | null;
+	created_at: string;
+	updated_at: string;
+};
+
+export type ContentOperationRow = {
+	id: string;
+	idempotency_key: string;
+	type: string;
+	status: string;
+	draft_id: string | null;
+	content_id: string;
+	source_path: string | null;
+	target_path: string | null;
+	commit_sha: string | null;
+	error_code: string | null;
+	created_at: string;
+	updated_at: string;
+};
+
+export type AuditItem = {
+	id: string;
+	action: string;
+	ip: string;
+	result: string;
+	resourceType: string;
+	resourceId: string;
+	createdAt: string;
+};
+
+export type AuditPage = {
+	items: AuditItem[];
+	nextBefore: string | null;
+};
+
+export type SessionItem = {
+	id: string;
+	createdAt: string;
+	expiresAt: number;
+	current: boolean;
+};
+
+export type AdminOverview = {
+	posts: {
+		published: number;
+		drafts: number;
+		withdrawn: number;
+		total: number;
+	};
+	mediaCount: number;
+	mediaAvailable: boolean;
+	pages: { total: number; staged: number };
+	settings: { totalGroups: number; stagedGroups: number };
+	publishing: {
+		activeTasks: number;
+		reconciliationRequired: number;
+		failedOperations: number;
+		lastDeployedAt: string | null;
+	};
+	recentAudit: AuditItem[];
+	githubConfigured: boolean;
 };
