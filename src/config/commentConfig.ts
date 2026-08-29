@@ -78,6 +78,10 @@ export const commentConfig: CommentConfig = {
 		lang: "zh-CN",
 		// 获取 Giscus 评论系统加载方式
 		loading: "lazy",
+		// 亮色模式下的评论主题：无边框浅色，融入站点卡片
+		themeLight: "noborder_light",
+		// 暗色模式下的评论主题：透明背景，与暗色卡片融为一体
+		themeDark: "transparent_dark",
 	},
 
 	//disqus评论系统配置

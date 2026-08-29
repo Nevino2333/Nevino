@@ -57,6 +57,10 @@ export type CommentConfig = {
 		inputPosition: string;
 		lang: string;
 		loading: string;
+		/** 亮色模式下的 giscus 主题，如 light / noborder_light */
+		themeLight?: string;
+		/** 暗色模式下的 giscus 主题，如 dark / transparent_dark */
+		themeDark?: string;
 	};
 	disqus?: {
 		shortname: string;

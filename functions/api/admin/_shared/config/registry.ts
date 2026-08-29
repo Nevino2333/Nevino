@@ -107,7 +107,12 @@ const list = (
 const text = (
 	key: string,
 	label: string,
-	options?: { required?: boolean; maxLength?: number; help?: string; placeholder?: string },
+	options?: {
+		required?: boolean;
+		maxLength?: number;
+		help?: string;
+		placeholder?: string;
+	},
 ): FieldMeta => ({
 	key,
 	type: "text",
@@ -211,8 +216,14 @@ export const containsSensitiveValue = (value: JsonLikeValue): boolean => {
 const friendItemFields: FieldMeta[] = [
 	text("title", "名称", { required: true, maxLength: 120 }),
 	text("desc", "描述", { maxLength: 300 }),
-	url("siteurl", "站点地址", { required: true, urlPrefixes: standardUrlPrefixes }),
-	url("imgurl", "头像地址", { required: true, urlPrefixes: standardUrlPrefixes }),
+	url("siteurl", "站点地址", {
+		required: true,
+		urlPrefixes: standardUrlPrefixes,
+	}),
+	url("imgurl", "头像地址", {
+		required: true,
+		urlPrefixes: standardUrlPrefixes,
+	}),
 	url("rss", "RSS/Atom", { urlPrefixes: standardUrlPrefixes }),
 	tags("tags", "标签"),
 	boolean("recommended", "推荐友链样式"),
@@ -286,7 +297,10 @@ export const CONFIG_GROUPS: ConfigGroup[] = [
 		description: "管理友链页面配置、友链列表与已加入的博客项目。",
 		filePath: "src/config/friendsConfig.ts",
 		fields: [
-			binding("friendsPageConfig", text("title", "页面标题", { maxLength: 120 })),
+			binding(
+				"friendsPageConfig",
+				text("title", "页面标题", { maxLength: 120 }),
+			),
 			binding(
 				"friendsPageConfig",
 				textarea("description", "页面描述", { maxLength: 400 }),
@@ -372,14 +386,20 @@ export const CONFIG_GROUPS: ConfigGroup[] = [
 		description: "侧栏公告卡片的标题、内容与链接。",
 		filePath: "src/config/announcementConfig.ts",
 		fields: [
-			binding("announcementConfig", text("title", "公告标题", { maxLength: 120 })),
+			binding(
+				"announcementConfig",
+				text("title", "公告标题", { maxLength: 120 }),
+			),
 			binding(
 				"announcementConfig",
 				textarea("content", "公告内容", { maxLength: 1000 }),
 			),
 			binding("announcementConfig", boolean("closable", "允许访客关闭公告")),
 			binding("announcementConfig", boolean("link.enable", "启用链接")),
-			binding("announcementConfig", text("link.text", "链接文本", { maxLength: 60 })),
+			binding(
+				"announcementConfig",
+				text("link.text", "链接文本", { maxLength: 60 }),
+			),
 			binding(
 				"announcementConfig",
 				url("link.url", "链接地址", { urlPrefixes: standardUrlPrefixes }),
@@ -405,7 +425,10 @@ export const CONFIG_GROUPS: ConfigGroup[] = [
 			),
 			binding("sponsorConfig", boolean("showSponsorsList", "显示赞助者列表")),
 			binding("sponsorConfig", boolean("showComment", "显示评论区")),
-			binding("sponsorConfig", boolean("showButtonInPost", "文章页显示打赏按钮")),
+			binding(
+				"sponsorConfig",
+				boolean("showButtonInPost", "文章页显示打赏按钮"),
+			),
 			list("sponsorConfig", "methods", {
 				label: "打赏方式",
 				itemLabelKey: "name",
@@ -477,7 +500,10 @@ export const CONFIG_GROUPS: ConfigGroup[] = [
 		description: "站点标题、描述、页面开关与文章列表布局等核心设置。",
 		filePath: "src/config/siteConfig.ts",
 		fields: [
-			binding("siteConfig", text("title", "站点标题", { required: true, maxLength: 100 })),
+			binding(
+				"siteConfig",
+				text("title", "站点标题", { required: true, maxLength: 100 }),
+			),
 			binding("siteConfig", text("subtitle", "站点副标题", { maxLength: 200 })),
 			binding(
 				"siteConfig",
@@ -486,11 +512,23 @@ export const CONFIG_GROUPS: ConfigGroup[] = [
 			binding("siteConfig", tags("keywords", "站点关键词")),
 			binding(
 				"siteConfig",
-				url("site_url", "站点 URL", { required: true, urlPrefixes: ["http://", "https://"] }),
+				url("site_url", "站点 URL", {
+					required: true,
+					urlPrefixes: ["http://", "https://"],
+				}),
 			),
-			binding("siteConfig", text("timezone", "时区（IANA）", { maxLength: 64 })),
-			binding("siteConfig", text("siteStartDate", "建站日期（YYYY-MM-DD）", { maxLength: 10 })),
-			binding("siteConfig", number("themeColor.hue", "主题色色相", { min: 0, max: 360 })),
+			binding(
+				"siteConfig",
+				text("timezone", "时区（IANA）", { maxLength: 64 }),
+			),
+			binding(
+				"siteConfig",
+				text("siteStartDate", "建站日期（YYYY-MM-DD）", { maxLength: 10 }),
+			),
+			binding(
+				"siteConfig",
+				number("themeColor.hue", "主题色色相", { min: 0, max: 360 }),
+			),
 			binding("siteConfig", boolean("themeColor.fixed", "隐藏主题色选择器")),
 			binding(
 				"siteConfig",
@@ -500,7 +538,10 @@ export const CONFIG_GROUPS: ConfigGroup[] = [
 					{ value: "system", label: "跟随系统" },
 				]),
 			),
-			binding("siteConfig", text("navbar.title", "导航栏标题", { maxLength: 100 })),
+			binding(
+				"siteConfig",
+				text("navbar.title", "导航栏标题", { maxLength: 100 }),
+			),
 			binding("siteConfig", boolean("pages.friends", "友链页面")),
 			binding("siteConfig", boolean("pages.sponsor", "打赏页面")),
 			binding("siteConfig", boolean("pages.guestbook", "留言板页面")),
@@ -534,17 +575,32 @@ export const CONFIG_GROUPS: ConfigGroup[] = [
 			),
 			binding(
 				"siteConfig",
-				number("postListLayout.descriptionLines", "摘要行数", { min: 0, max: 10 }),
+				number("postListLayout.descriptionLines", "摘要行数", {
+					min: 0,
+					max: 10,
+				}),
 			),
-			binding("siteConfig", boolean("postListLayout.grid.masonry", "瀑布流布局")),
 			binding(
 				"siteConfig",
-				number("postListLayout.grid.columnWidth", "网格最小列宽(px)", { min: 200, max: 800 }),
+				boolean("postListLayout.grid.masonry", "瀑布流布局"),
 			),
-			binding("siteConfig", boolean("post.showLastModified", "显示上次编辑时间")),
 			binding(
 				"siteConfig",
-				number("post.outdatedThreshold", "过期提示阈值（天）", { min: 0, max: 3650 }),
+				number("postListLayout.grid.columnWidth", "网格最小列宽(px)", {
+					min: 200,
+					max: 800,
+				}),
+			),
+			binding(
+				"siteConfig",
+				boolean("post.showLastModified", "显示上次编辑时间"),
+			),
+			binding(
+				"siteConfig",
+				number("post.outdatedThreshold", "过期提示阈值（天）", {
+					min: 0,
+					max: 3650,
+				}),
 			),
 			binding("siteConfig", boolean("post.sharePoster", "分享海报")),
 			binding("siteConfig", boolean("post.generateOgImages", "生成 OG 图片")),
@@ -561,7 +617,10 @@ export const CONFIG_GROUPS: ConfigGroup[] = [
 				"profileConfig",
 				url("avatar", "头像地址", { urlPrefixes: standardUrlPrefixes }),
 			),
-			binding("profileConfig", text("name", "名字", { required: true, maxLength: 80 })),
+			binding(
+				"profileConfig",
+				text("name", "名字", { required: true, maxLength: 80 }),
+			),
 			binding("profileConfig", textarea("bio", "个人签名", { maxLength: 300 })),
 			list("profileConfig", "links", {
 				label: "社交链接",
@@ -606,17 +665,36 @@ export const CONFIG_GROUPS: ConfigGroup[] = [
 			),
 			binding(
 				"commentConfig",
-				url("twikoo.envId", "Twikoo 环境地址", { urlPrefixes: ["http://", "https://"] }),
+				url("twikoo.envId", "Twikoo 环境地址", {
+					urlPrefixes: ["http://", "https://"],
+				}),
 			),
 			binding(
 				"commentConfig",
-				url("artalk.server", "Artalk 服务地址", { urlPrefixes: ["http://", "https://"] }),
+				url("artalk.server", "Artalk 服务地址", {
+					urlPrefixes: ["http://", "https://"],
+				}),
 			),
-			binding("commentConfig", text("disqus.shortname", "Disqus Shortname", { maxLength: 120 })),
-			binding("commentConfig", text("giscus.repo", "Giscus 仓库", { maxLength: 160 })),
-			binding("commentConfig", text("giscus.repoId", "Giscus 仓库 ID", { maxLength: 80 })),
-			binding("commentConfig", text("giscus.category", "Giscus 分类", { maxLength: 80 })),
-			binding("commentConfig", text("giscus.categoryId", "Giscus 分类 ID", { maxLength: 80 })),
+			binding(
+				"commentConfig",
+				text("disqus.shortname", "Disqus Shortname", { maxLength: 120 }),
+			),
+			binding(
+				"commentConfig",
+				text("giscus.repo", "Giscus 仓库", { maxLength: 160 }),
+			),
+			binding(
+				"commentConfig",
+				text("giscus.repoId", "Giscus 仓库 ID", { maxLength: 80 }),
+			),
+			binding(
+				"commentConfig",
+				text("giscus.category", "Giscus 分类", { maxLength: 80 }),
+			),
+			binding(
+				"commentConfig",
+				text("giscus.categoryId", "Giscus 分类 ID", { maxLength: 80 }),
+			),
 			binding(
 				"commentConfig",
 				select("giscus.mapping", "Giscus 映射方式", [
@@ -633,6 +711,42 @@ export const CONFIG_GROUPS: ConfigGroup[] = [
 					{ value: "bottom", label: "底部" },
 				]),
 			),
+			binding(
+				"commentConfig",
+				select("giscus.themeLight", "亮色模式评论主题", [
+					{ value: "light", label: "亮色" },
+					{ value: "light_high_contrast", label: "亮色（高对比）" },
+					{ value: "light_protanopia", label: "亮色（红绿色盲友好）" },
+					{ value: "light_tritanopia", label: "亮色（蓝黄色盲友好）" },
+					{ value: "noborder_light", label: "亮色（无边框，融入卡片）" },
+					{ value: "noborder_grayscale", label: "亮色（无边框灰度）" },
+					{ value: "dark", label: "暗色" },
+					{ value: "dark_high_contrast", label: "暗色（高对比）" },
+					{ value: "dark_dimmed", label: "暗色（柔和）" },
+					{ value: "transparent_dark", label: "暗色（透明，融入卡片）" },
+					{ value: "noborder_dark", label: "暗色（无边框）" },
+					{ value: "dark_grayscale", label: "暗色（灰度）" },
+					{ value: "preferred_color_scheme", label: "跟随系统" },
+				]),
+			),
+			binding(
+				"commentConfig",
+				select("giscus.themeDark", "暗色模式评论主题", [
+					{ value: "light", label: "亮色" },
+					{ value: "light_high_contrast", label: "亮色（高对比）" },
+					{ value: "light_protanopia", label: "亮色（红绿色盲友好）" },
+					{ value: "light_tritanopia", label: "亮色（蓝黄色盲友好）" },
+					{ value: "noborder_light", label: "亮色（无边框，融入卡片）" },
+					{ value: "noborder_grayscale", label: "亮色（无边框灰度）" },
+					{ value: "dark", label: "暗色" },
+					{ value: "dark_high_contrast", label: "暗色（高对比）" },
+					{ value: "dark_dimmed", label: "暗色（柔和）" },
+					{ value: "transparent_dark", label: "暗色（透明，融入卡片）" },
+					{ value: "noborder_dark", label: "暗色（无边框）" },
+					{ value: "dark_grayscale", label: "暗色（灰度）" },
+					{ value: "preferred_color_scheme", label: "跟随系统" },
+				]),
+			),
 		],
 	},
 	{
@@ -642,8 +756,14 @@ export const CONFIG_GROUPS: ConfigGroup[] = [
 		description: "统计服务 ID 与站点统计卡片的展示开关。",
 		filePath: "src/config/analyticsConfig.ts",
 		fields: [
-			binding("analyticsConfig", text("googleAnalyticsId", "Google Analytics ID", { maxLength: 60 })),
-			binding("analyticsConfig", text("microsoftClarityId", "Microsoft Clarity ID", { maxLength: 60 })),
+			binding(
+				"analyticsConfig",
+				text("googleAnalyticsId", "Google Analytics ID", { maxLength: 60 }),
+			),
+			binding(
+				"analyticsConfig",
+				text("microsoftClarityId", "Microsoft Clarity ID", { maxLength: 60 }),
+			),
 			binding(
 				"analyticsConfig",
 				text("umamiAnalytics.websiteId", "Umami Website ID", { maxLength: 80 }),
@@ -669,15 +789,30 @@ export const CONFIG_GROUPS: ConfigGroup[] = [
 			),
 			binding(
 				"analyticsConfig",
-				number("umamiAnalytics.historicalStats.visitors", "历史访客数", { min: 0, max: 100000000 }),
+				number("umamiAnalytics.historicalStats.visitors", "历史访客数", {
+					min: 0,
+					max: 100000000,
+				}),
 			),
 			binding(
 				"analyticsConfig",
-				number("umamiAnalytics.historicalStats.pageviews", "历史浏览量", { min: 0, max: 100000000 }),
+				number("umamiAnalytics.historicalStats.pageviews", "历史浏览量", {
+					min: 0,
+					max: 100000000,
+				}),
 			),
-			binding("analyticsConfig", boolean("umamiAnalytics.showPageViews", "显示文章阅读量")),
-			binding("analyticsConfig", boolean("umamiAnalytics.showSiteStats", "显示站点统计卡片")),
-			binding("analyticsConfig", text("la51Analytics.Id", "51la 统计 ID", { maxLength: 80 })),
+			binding(
+				"analyticsConfig",
+				boolean("umamiAnalytics.showPageViews", "显示文章阅读量"),
+			),
+			binding(
+				"analyticsConfig",
+				boolean("umamiAnalytics.showSiteStats", "显示站点统计卡片"),
+			),
+			binding(
+				"analyticsConfig",
+				text("la51Analytics.Id", "51la 统计 ID", { maxLength: 80 }),
+			),
 		],
 	},
 	{
@@ -688,7 +823,10 @@ export const CONFIG_GROUPS: ConfigGroup[] = [
 		filePath: "src/config/licenseConfig.ts",
 		fields: [
 			binding("licenseConfig", boolean("enable", "显示许可证信息")),
-			binding("licenseConfig", text("name", "许可证名称", { required: true, maxLength: 80 })),
+			binding(
+				"licenseConfig",
+				text("name", "许可证名称", { required: true, maxLength: 80 }),
+			),
 			binding(
 				"licenseConfig",
 				url("url", "许可证链接", { urlPrefixes: ["http://", "https://"] }),
@@ -799,7 +937,8 @@ export const validateGroupValues = (
 					return;
 				}
 				if (value.length > 500) errors[id] = "长度不能超过 500 个字符";
-				if (value.includes(" ") || value.includes('"')) errors[id] = "包含非法字符";
+				if (value.includes(" ") || value.includes('"'))
+					errors[id] = "包含非法字符";
 				if (containsSensitiveValue(value)) errors[id] = "包含疑似密钥内容";
 				return;
 			}
@@ -823,7 +962,10 @@ export const validateGroupValues = (
 				return;
 			}
 			case "select": {
-				if (typeof value !== "string" || !field.options.some((o) => o.value === value))
+				if (
+					typeof value !== "string" ||
+					!field.options.some((o) => o.value === value)
+				)
 					errors[id] = "选项无效";
 				return;
 			}
@@ -837,7 +979,11 @@ export const validateGroupValues = (
 					return;
 				}
 				for (const item of value) {
-					if (typeof item !== "string" || item.length === 0 || item.length > 60) {
+					if (
+						typeof item !== "string" ||
+						item.length === 0 ||
+						item.length > 60
+					) {
 						errors[id] = "每项必须为 1-60 个字符的文本";
 						return;
 					}
@@ -854,13 +1000,19 @@ export const validateGroupValues = (
 					return;
 				}
 				value.forEach((item, index) => {
-					if (typeof item !== "object" || item === null || Array.isArray(item)) {
+					if (
+						typeof item !== "object" ||
+						item === null ||
+						Array.isArray(item)
+					) {
 						errors[id] = "第 " + String(index + 1) + " 项格式无效";
 						return;
 					}
 					const itemId = id + "[" + String(index) + "]";
 					for (const itemField of field.fields) {
-						const itemValue = (item as Record<string, JsonLikeValue>)[itemField.key];
+						const itemValue = (item as Record<string, JsonLikeValue>)[
+							itemField.key
+						];
 						if (itemValue === undefined) {
 							if (itemField.type === "text" && itemField.required)
 								errors[itemId + "." + itemField.key] = "必填项";
@@ -892,7 +1044,8 @@ export const validateGroupValues = (
 				errors[codeFile.id] =
 					"内容不能超过 " + String(codeFile.maxLength) + " 个字符";
 			}
-			if (containsSensitiveValue(content)) errors[codeFile.id] = "包含疑似密钥内容";
+			if (containsSensitiveValue(content))
+				errors[codeFile.id] = "包含疑似密钥内容";
 		}
 	}
 	return errors;

@@ -6,63 +6,75 @@ if (!commentConfig?.giscus) {
 }
 
 const giscus = commentConfig.giscus;
-const lightTheme = "light";
-const darkTheme = "dark";
+// 无边框浅色 / 透明暗色：让评论区融入站点卡片，而不是卡片里再叠一块板
+const lightTheme = giscus.themeLight || "noborder_light";
+const darkTheme = giscus.themeDark || "transparent_dark";
+const giscusOptions = {
+	repo: giscus.repo,
+	repoId: giscus.repoId,
+	category: giscus.category,
+	categoryId: giscus.categoryId,
+	mapping: giscus.mapping,
+	strict: giscus.strict,
+	reactionsEnabled: giscus.reactionsEnabled,
+	emitMetadata: giscus.emitMetadata,
+	inputPosition: giscus.inputPosition,
+	lang: giscus.lang,
+	loading: giscus.loading,
+};
 ---
 
 <!--
   Giscus 官方 client.js 嵌入方式（来自 giscus.app 本身）。
   主题原先经 esm.sh 加载 Web Component，但 esm.sh 不在站点 CSP 白名单内，
   且国内访问不稳定，会导致评论区持续空白，故改用官方脚本嵌入。
+  初始 data-theme 由内联脚本按当前明暗动态生成，避免暗色用户首屏闪白。
 -->
-<script
-  is:inline
-  src="https://giscus.app/client.js"
-  data-repo={giscus.repo}
-  data-repo-id={giscus.repoId}
-  data-category={giscus.category}
-  data-category-id={giscus.categoryId}
-  data-mapping={giscus.mapping}
-  data-strict={giscus.strict}
-  data-reactions-enabled={giscus.reactionsEnabled}
-  data-emit-metadata={giscus.emitMetadata}
-  data-input-position={giscus.inputPosition}
-  data-theme={lightTheme}
-  data-lang={giscus.lang}
-  data-loading={giscus.loading}
-  crossorigin="anonymous"
-  async
-></script>
+<template id="giscus-theme-anchor"></template>
 
-<script is:inline define:vars={{ lightTheme, darkTheme }}>
-  function updateGiscusTheme() {
+<script is:inline define:vars={{ giscusOptions, lightTheme, darkTheme }}>
+  (() => {
+    const anchor = document.getElementById('giscus-theme-anchor');
+    if (!anchor) return;
+
     const isDark = document.documentElement.classList.contains('dark');
-    const theme = isDark ? darkTheme : lightTheme;
-    const iframe = document.querySelector('iframe.giscus-frame');
-    if (iframe && iframe.contentWindow) {
-      iframe.contentWindow.postMessage(
-        { giscus: { setConfig: { theme } } },
-        'https://giscus.app',
-      );
+    const initialTheme = isDark ? darkTheme : lightTheme;
+
+    const script = document.createElement('script');
+    script.src = 'https://giscus.app/client.js';
+    for (const [key, value] of Object.entries(giscusOptions)) {
+      script.setAttribute('data-' + key.replace(/[A-Z]/g, (ch) => '-' + ch.toLowerCase()), String(value));
     }
-  }
+    script.setAttribute('data-theme', initialTheme);
+    script.setAttribute('crossorigin', 'anonymous');
+    script.setAttribute('async', '');
+    anchor.replaceWith(script);
 
-  // Initial update (iframe may not exist yet; giscus reads the initial data-theme)
-  updateGiscusTheme();
-
-  // Clean up previous observer if exists
-  if (window.giscusThemeObserver) {
-    window.giscusThemeObserver.disconnect();
-  }
-
-  // Create new observer
-  window.giscusThemeObserver = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-      if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-        updateGiscusTheme();
+    function updateGiscusTheme() {
+      const nextTheme = document.documentElement.classList.contains('dark')
+        ? darkTheme
+        : lightTheme;
+      const iframe = document.querySelector('iframe.giscus-frame');
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage(
+          { giscus: { setConfig: { theme: nextTheme } } },
+          'https://giscus.app',
+        );
       }
-    });
-  });
+    }
 
-  window.giscusThemeObserver.observe(document.documentElement, { attributes: true });
+    if (window.giscusThemeObserver) {
+      window.giscusThemeObserver.disconnect();
+    }
+
+    window.giscusThemeObserver = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+          updateGiscusTheme();
+        }
+      });
+    });
+
+    window.giscusThemeObserver.observe(document.documentElement, { attributes: true });
+  })();
 </script>
