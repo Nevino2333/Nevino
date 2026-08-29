@@ -11,6 +11,7 @@ const adminViews = new Set<AdminView>([
 	"announcement",
 	"sponsor",
 	"tools",
+	"music",
 	"settings",
 	"publishing",
 	"security",

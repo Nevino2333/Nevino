@@ -93,9 +93,10 @@ const list = (
 		maxItems?: number;
 		help?: string;
 	},
+	pathOverride?: (string | number)[],
 ): FieldBinding => {
 	// 块本身是数组（如 friendsConfig）时 path 为空；否则 key 是块内成员名
-	const path = key === block ? [] : [key];
+	const path = pathOverride ?? (key === block ? [] : key.split("."));
 	return {
 		id: [block, ...path].join("."),
 		block,
@@ -493,6 +494,500 @@ export const CONFIG_GROUPS: ConfigGroup[] = [
 			}),
 		],
 	},
+	{
+		key: "music",
+		label: "音乐",
+		section: "content",
+		description:
+			"音乐播放器模式、播放列表与 Meting API 配置；音频与歌词文件仍需放入 public/assets/music/。",
+		filePath: "src/config/musicConfig.ts",
+		fields: [
+			binding("musicPlayerConfig", boolean("showInNavbar", "导航栏显示播放器入口")),
+			binding(
+				"musicPlayerConfig",
+				select("mode", "播放源模式", [
+					{ value: "meting", label: "Meting API" },
+					{ value: "local", label: "本地播放列表" },
+				]),
+			),
+			binding(
+				"musicPlayerConfig",
+				number("volume", "默认音量", { min: 0, max: 1, integer: false, help: "0-1 之间的小数" }),
+			),
+			binding(
+				"musicPlayerConfig",
+				select("playMode", "播放模式", [
+					{ value: "list", label: "列表循环" },
+					{ value: "one", label: "单曲循环" },
+					{ value: "random", label: "随机播放" },
+				]),
+			),
+			binding("musicPlayerConfig", boolean("showLyrics", "显示歌词")),
+			binding(
+				"musicPlayerConfig",
+				url("meting.api", "Meting API 地址", { urlPrefixes: ["http://", "https://"] }),
+			),
+			binding(
+				"musicPlayerConfig",
+				select("meting.server", "音乐平台", [
+					{ value: "netease", label: "网易云音乐" },
+					{ value: "tencent", label: "QQ音乐" },
+					{ value: "kugou", label: "酷狗音乐" },
+					{ value: "baidu", label: "百度音乐" },
+				]),
+			),
+			binding(
+				"musicPlayerConfig",
+				select("meting.type", "资源类型", [
+					{ value: "song", label: "单曲" },
+					{ value: "playlist", label: "歌单" },
+					{ value: "album", label: "专辑" },
+					{ value: "search", label: "搜索" },
+					{ value: "artist", label: "艺术家" },
+				]),
+			),
+			binding("musicPlayerConfig", text("meting.id", "歌单/单曲 ID", { maxLength: 120 })),
+			binding(
+				"musicPlayerConfig",
+				tags("meting.fallbackApis", "备用 API 列表", "每项一个完整的 Meting API 地址"),
+			),
+			list("musicPlayerConfig", "local.playlist", {
+				label: "本地播放列表",
+				itemLabelKey: "name",
+				fields: [
+					text("name", "歌曲名", { required: true, maxLength: 120 }),
+					text("artist", "艺术家", { maxLength: 160 }),
+					url("url", "音频地址", {
+						required: true,
+						urlPrefixes: ["http://", "https://", "/"],
+						help: "public/assets/music/ 下的 mp3 路径或外链",
+					}),
+					url("cover", "封面图", { urlPrefixes: standardUrlPrefixes }),
+					url("lrc", "歌词文件或内容", { urlPrefixes: localUrlPrefixes }),
+				],
+				defaultItem: { name: "", artist: "", url: "", cover: "", lrc: "" },
+				maxItems: 200,
+			}),
+		],
+	},
+	{
+		key: "wallpaper",
+		label: "壁纸与横幅",
+		section: "settings",
+		description:
+			"壁纸模式、横幅文字与导航栏、轮播参数；桌面/移动壁纸图片列表由仓库代码生成，后台以只读呈现。",
+		filePath: "src/config/backgroundWallpaper.ts",
+		fields: [
+			binding(
+				"backgroundWallpaper",
+				select("mode", "壁纸模式", [
+					{ value: "banner", label: "横幅壁纸" },
+					{ value: "fullscreen", label: "全屏壁纸" },
+					{ value: "overlay", label: "全屏透明" },
+					{ value: "none", label: "纯色背景" },
+				]),
+			),
+			binding("backgroundWallpaper", boolean("switchable", "允许访客切换壁纸模式")),
+			binding("backgroundWallpaper", boolean("playerEnable", "启用背景视频播放")),
+			binding(
+				"backgroundWallpaper",
+				tags("src.playerUrl", "背景视频地址", "支持单个或多个视频 URL"),
+			),
+			binding(
+				"backgroundWallpaper",
+				number("common.dimOpacity", "壁纸遮罩暗度", { min: 0, max: 1, integer: false }),
+			),
+			binding(
+				"backgroundWallpaper",
+				select("common.playerMode", "多视频播放模式", [
+					{ value: "order", label: "顺序循环" },
+					{ value: "random", label: "随机切换" },
+				]),
+			),
+			binding("backgroundWallpaper", boolean("common.homeText.enable", "显示主页横幅文字")),
+			binding(
+				"backgroundWallpaper",
+				boolean("common.homeText.switchable", "允许访客切换横幅文字"),
+			),
+			binding("backgroundWallpaper", text("common.homeText.title", "横幅主标题", { maxLength: 120 })),
+			binding(
+				"backgroundWallpaper",
+				text("common.homeText.titleSize", "主标题字号（CSS 值）", { maxLength: 20 }),
+			),
+			binding("backgroundWallpaper", tags("common.homeText.subtitle", "横幅副标题句子")),
+			binding(
+				"backgroundWallpaper",
+				text("common.homeText.subtitleSize", "副标题字号（CSS 值）", { maxLength: 20 }),
+			),
+			binding(
+				"backgroundWallpaper",
+				boolean("common.homeText.typewriter.enable", "副标题打字机效果"),
+			),
+			binding(
+				"backgroundWallpaper",
+				number("common.homeText.typewriter.speed", "打字速度（毫秒）", { min: 10, max: 1000 }),
+			),
+			binding(
+				"backgroundWallpaper",
+				number("common.homeText.typewriter.deleteSpeed", "删除速度（毫秒）", { min: 10, max: 1000 }),
+			),
+			binding(
+				"backgroundWallpaper",
+				number("common.homeText.typewriter.pauseTime", "显示后暂停（毫秒）", { min: 0, max: 10000 }),
+			),
+			binding(
+				"backgroundWallpaper",
+				select("common.navbar.transparentMode", "导航栏透明模式", [
+					{ value: "semi", label: "半透明" },
+					{ value: "full", label: "完全透明" },
+					{ value: "semifull", label: "动态透明" },
+				]),
+			),
+			binding("backgroundWallpaper", boolean("common.navbar.enableBlur", "导航栏毛玻璃模糊")),
+			binding("backgroundWallpaper", number("common.navbar.blur", "毛玻璃模糊度", { min: 0, max: 30 })),
+			binding("backgroundWallpaper", boolean("common.waves.enable.desktop", "水波纹（桌面）")),
+			binding("backgroundWallpaper", boolean("common.waves.enable.mobile", "水波纹（移动端）")),
+			binding("backgroundWallpaper", boolean("common.waves.switchable", "允许访客切换水波纹")),
+			binding("backgroundWallpaper", boolean("common.gradient.enable.desktop", "渐变过渡（桌面）")),
+			binding("backgroundWallpaper", boolean("common.gradient.enable.mobile", "渐变过渡（移动端）")),
+			binding("backgroundWallpaper", text("common.gradient.height", "渐变高度（CSS 值）", { maxLength: 20 })),
+			binding("backgroundWallpaper", boolean("common.carousel.enable", "启用壁纸轮播")),
+			binding(
+				"backgroundWallpaper",
+				number("common.carousel.interval", "轮播间隔（毫秒）", { min: 1000, max: 60000 }),
+			),
+			binding(
+				"backgroundWallpaper",
+				select("common.carousel.transitionEffect", "轮播过渡效果", [
+					{ value: "fade", label: "渐变" },
+					{ value: "zoom", label: "缩放" },
+					{ value: "slide", label: "滑动" },
+					{ value: "kenburns", label: "旋转木马" },
+				]),
+			),
+			binding("backgroundWallpaper", text("banner.position", "横幅图片位置（CSS 值）", { maxLength: 40 })),
+			binding(
+				"backgroundWallpaper",
+				text("fullscreen.position", "全屏图片位置（CSS 值）", { maxLength: 40 }),
+			),
+			binding(
+				"backgroundWallpaper",
+				number("overlay.opacity", "透明模式壁纸不透明度", { min: 0, max: 1, integer: false }),
+			),
+			binding("backgroundWallpaper", number("overlay.blur", "透明模式背景模糊", { min: 0, max: 40 })),
+			binding(
+				"backgroundWallpaper",
+				number("overlay.cardOpacity", "透明模式卡片不透明度", { min: 0, max: 1, integer: false }),
+			),
+		],
+	},
+	{
+		key: "effects",
+		label: "樱花特效",
+		section: "settings",
+		description: "樱花飘落动画的开关与数量、速度等参数。",
+		filePath: "src/config/effectsConfig.ts",
+		fields: [
+			binding("sakuraConfig", boolean("enable", "启用樱花特效")),
+			binding("sakuraConfig", boolean("switchable", "允许访客切换特效")),
+			binding("sakuraConfig", number("sakuraNum", "樱花数量", { min: 0, max: 100 })),
+			binding(
+				"sakuraConfig",
+				number("limitTimes", "越界限制次数", { min: -1, max: 1000, help: "-1 为无限循环" }),
+			),
+			binding("sakuraConfig", number("size.min", "尺寸倍数下限", { min: 0.1, max: 3, integer: false })),
+			binding("sakuraConfig", number("size.max", "尺寸倍数上限", { min: 0.1, max: 3, integer: false })),
+			binding("sakuraConfig", number("opacity.min", "不透明度下限", { min: 0, max: 1, integer: false })),
+			binding("sakuraConfig", number("opacity.max", "不透明度上限", { min: 0, max: 1, integer: false })),
+			binding(
+				"sakuraConfig",
+				number("speed.horizontal.min", "水平速度下限", { min: -10, max: 10, integer: false }),
+			),
+			binding(
+				"sakuraConfig",
+				number("speed.horizontal.max", "水平速度上限", { min: -10, max: 10, integer: false }),
+			),
+			binding(
+				"sakuraConfig",
+				number("speed.vertical.min", "垂直速度下限", { min: 0, max: 10, integer: false }),
+			),
+			binding(
+				"sakuraConfig",
+				number("speed.vertical.max", "垂直速度上限", { min: 0, max: 10, integer: false }),
+			),
+			binding("sakuraConfig", number("speed.rotation", "旋转速度", { min: -1, max: 1, integer: false })),
+			binding("sakuraConfig", number("speed.fadeSpeed", "消失速度", { min: 0, max: 1, integer: false })),
+			binding("sakuraConfig", number("zIndex", "显示层级", { min: -1, max: 10000 })),
+		],
+	},
+	{
+		key: "pio",
+		label: "看板娘",
+		section: "settings",
+		description:
+			"Spine 与 Live2D 看板娘的开关、位置与互动文案；模型文件仍需放入 public/pio/models/。",
+		filePath: "src/config/pioConfig.ts",
+		fields: [
+			binding("spineModelConfig", boolean("enable", "启用 Spine 看板娘")),
+			binding("spineModelConfig", text("model.path", "模型文件路径", { maxLength: 300 })),
+			binding(
+				"spineModelConfig",
+				number("model.scale", "模型缩放", { min: 0.1, max: 5, integer: false }),
+			),
+			binding(
+				"spineModelConfig",
+				select("position.corner", "显示位置", [
+					{ value: "bottom-left", label: "左下角" },
+					{ value: "bottom-right", label: "右下角" },
+					{ value: "top-left", label: "左上角" },
+					{ value: "top-right", label: "右上角" },
+				]),
+			),
+			binding("spineModelConfig", number("position.offsetX", "水平偏移（px）", { min: -200, max: 200 })),
+			binding("spineModelConfig", number("position.offsetY", "垂直偏移（px）", { min: -200, max: 200 })),
+			binding("spineModelConfig", number("size.width", "容器宽度（px）", { min: 50, max: 600 })),
+			binding("spineModelConfig", number("size.height", "容器高度（px）", { min: 50, max: 800 })),
+			binding("spineModelConfig", boolean("interactive.enabled", "启用点击互动")),
+			binding("spineModelConfig", tags("interactive.clickAnimations", "点击播放的动画列表")),
+			binding("spineModelConfig", tags("interactive.clickMessages", "点击显示的文案")),
+			binding(
+				"spineModelConfig",
+				number("interactive.messageDisplayTime", "文案显示时长（毫秒）", { min: 500, max: 20000 }),
+			),
+			binding("spineModelConfig", tags("interactive.idleAnimations", "待机动画列表")),
+			binding(
+				"spineModelConfig",
+				number("interactive.idleInterval", "待机动画切换间隔（毫秒）", { min: 1000, max: 60000 }),
+			),
+			binding("spineModelConfig", boolean("responsive.hideOnMobile", "移动端隐藏")),
+			binding(
+				"spineModelConfig",
+				number("responsive.mobileBreakpoint", "移动端断点（px）", { min: 320, max: 1280 }),
+			),
+			binding("spineModelConfig", number("opacity", "不透明度", { min: 0.1, max: 1, integer: false })),
+			binding("live2dWidgetConfig", boolean("enable", "启用 Live2D 看板娘")),
+			binding(
+				"live2dWidgetConfig",
+				select("position", "显示位置", [
+					{ value: "bottom-left", label: "左下角" },
+					{ value: "bottom-right", label: "右下角" },
+				]),
+			),
+			binding("live2dWidgetConfig", number("size.width", "画布宽度（px）", { min: 100, max: 500 })),
+			binding("live2dWidgetConfig", number("size.height", "画布高度（px）", { min: 100, max: 500 })),
+			binding("live2dWidgetConfig", boolean("tips.enable", "启用提示气泡")),
+			binding("live2dWidgetConfig", tags("tips.welcomeMessage", "欢迎消息")),
+			binding("live2dWidgetConfig", tags("tips.messages", "循环提示文案")),
+			binding("live2dWidgetConfig", number("tips.duration", "文案显示时长（毫秒）", { min: 500, max: 20000 })),
+			binding(
+				"live2dWidgetConfig",
+				number("tips.interval", "气泡切换间隔（毫秒）", { min: 1000, max: 60000 }),
+			),
+			binding("live2dWidgetConfig", boolean("responsive.hideOnMobile", "移动端隐藏")),
+			binding(
+				"live2dWidgetConfig",
+				number("responsive.mobileBreakpoint", "移动端断点（px）", { min: 320, max: 1280 }),
+			),
+		],
+	},
+	{
+		key: "covers",
+		label: "文章封面",
+		section: "settings",
+		description:
+			'文章详情页封面展示与随机封面 API；文章 Frontmatter 中 image: "api" 即可使用随机图。',
+		filePath: "src/config/coverImageConfig.ts",
+		fields: [
+			binding("coverImageConfig", boolean("enableInPost", "文章详情页显示封面")),
+			binding("coverImageConfig", boolean("randomCoverImage.enable", "启用随机封面图")),
+			binding("coverImageConfig", tags("randomCoverImage.apis", "随机封面 API 列表")),
+			binding(
+				"coverImageConfig",
+				url("randomCoverImage.fallback", "API 失败回退图片", { urlPrefixes: localUrlPrefixes }),
+			),
+			binding("coverImageConfig", boolean("randomCoverImage.showLoading", "显示加载动画")),
+		],
+	},
+	{
+		key: "intro",
+		label: "首页开屏",
+		section: "settings",
+		description:
+			"首页开屏动画的默认角色、横幅与角色图列表；图片文件仍需放入 public/assets/images/home-truncated/。",
+		filePath: "src/config/homePortfolioIntro.ts",
+		fields: [
+			binding("homePortfolioIntroSettings", boolean("defaultEnabled", "默认播放开屏动画")),
+			binding("homePortfolioIntroSettings", text("defaultCharacterId", "默认角色 ID", { maxLength: 60 })),
+			binding(
+				"homePortfolioIntroSettings",
+				text("defaultTopBannerId", "桌面顶部横幅 ID", { maxLength: 60 }),
+			),
+			binding(
+				"homePortfolioIntroSettings",
+				text("defaultBottomBannerId", "桌面底部横幅 ID", { maxLength: 60 }),
+			),
+			binding(
+				"homePortfolioIntroSettings",
+				text("defaultMobileTopBannerId", "移动顶部横幅 ID", { maxLength: 60 }),
+			),
+			binding(
+				"homePortfolioIntroSettings",
+				text("defaultMobileBottomBannerId", "移动底部横幅 ID", { maxLength: 60 }),
+			),
+			list("homePortfolioIntroSettings", "characters", {
+				label: "角色列表",
+				itemLabelKey: "label",
+				fields: [
+					text("id", "角色 ID", { required: true, maxLength: 60 }),
+					text("label", "显示名称", { required: true, maxLength: 60 }),
+					url("src", "立绘图片", { required: true, urlPrefixes: standardUrlPrefixes }),
+					url("thumbnail", "缩略图", { urlPrefixes: standardUrlPrefixes }),
+				],
+				defaultItem: { id: "", label: "", src: "", thumbnail: "" },
+				maxItems: 30,
+			}),
+binding(
+			"homePortfolioIntroSettings",
+			{
+				key: "banners.desktop.top",
+				type: "list",
+				label: "桌面顶部横幅",
+				itemLabelKey: "label",
+				addable: true,
+				fields: [
+					text("id", "横幅 ID", { required: true, maxLength: 60 }),
+					text("label", "显示名称", { required: true, maxLength: 60 }),
+					url("src", "图片", { required: true, urlPrefixes: standardUrlPrefixes }),
+				],
+				defaultItem: { id: "", label: "", src: "" },
+				maxItems: 30,
+			},
+			["banners", "desktop", "top"],
+		),
+binding(
+			"homePortfolioIntroSettings",
+			{
+				key: "banners.desktop.bottom",
+				type: "list",
+				label: "桌面底部横幅",
+				itemLabelKey: "label",
+				addable: true,
+				fields: [
+					text("id", "横幅 ID", { required: true, maxLength: 60 }),
+					text("label", "显示名称", { required: true, maxLength: 60 }),
+					url("src", "图片", { required: true, urlPrefixes: standardUrlPrefixes }),
+				],
+				defaultItem: { id: "", label: "", src: "" },
+				maxItems: 30,
+			},
+			["banners", "desktop", "bottom"],
+		),
+binding(
+			"homePortfolioIntroSettings",
+			{
+				key: "banners.mobile.top",
+				type: "list",
+				label: "移动顶部横幅",
+				itemLabelKey: "label",
+				addable: true,
+				fields: [
+					text("id", "横幅 ID", { required: true, maxLength: 60 }),
+					text("label", "显示名称", { required: true, maxLength: 60 }),
+					url("src", "图片", { required: true, urlPrefixes: standardUrlPrefixes }),
+				],
+				defaultItem: { id: "", label: "", src: "" },
+				maxItems: 30,
+			},
+			["banners", "mobile", "top"],
+		),
+binding(
+			"homePortfolioIntroSettings",
+			{
+				key: "banners.mobile.bottom",
+				type: "list",
+				label: "移动底部横幅",
+				itemLabelKey: "label",
+				addable: true,
+				fields: [
+					text("id", "横幅 ID", { required: true, maxLength: 60 }),
+					text("label", "显示名称", { required: true, maxLength: 60 }),
+					url("src", "图片", { required: true, urlPrefixes: standardUrlPrefixes }),
+				],
+				defaultItem: { id: "", label: "", src: "" },
+				maxItems: 30,
+			},
+			["banners", "mobile", "bottom"],
+		),
+		],
+	},
+	{
+		key: "expressiveCode",
+		label: "代码高亮",
+		section: "settings",
+		description: "Expressive Code 亮暗主题与代码块折叠、语言徽章插件。",
+		filePath: "src/config/expressiveCodeConfig.ts",
+		fields: [
+			binding(
+				"expressiveCodeConfig",
+				text("darkTheme", "暗色主题名", {
+					required: true,
+					maxLength: 60,
+					help: "参见 expressive-code 官方主题列表",
+				}),
+			),
+			binding("expressiveCodeConfig", text("lightTheme", "亮色主题名", { required: true, maxLength: 60 })),
+			binding("expressiveCodeConfig", boolean("pluginCollapsible.enable", "启用代码块折叠")),
+			binding(
+				"expressiveCodeConfig",
+				number("pluginCollapsible.lineThreshold", "折叠按钮行数阈值", { min: 1, max: 200 }),
+			),
+			binding(
+				"expressiveCodeConfig",
+				number("pluginCollapsible.previewLines", "折叠时预览行数", { min: 1, max: 50 }),
+			),
+			binding("expressiveCodeConfig", boolean("pluginCollapsible.defaultCollapsed", "长代码块默认折叠")),
+			binding("expressiveCodeConfig", boolean("pluginLanguageBadge.enable", "启用语言徽章")),
+		],
+	},
+	{
+		key: "plantuml",
+		label: "PlantUML",
+		section: "settings",
+		description: "PlantUML 图表渲染开关、服务器地址与明暗主题。",
+		filePath: "src/config/plantumlConfig.ts",
+		fields: [
+			binding("plantumlConfig", boolean("enable", "启用 PlantUML 渲染")),
+			binding(
+				"plantumlConfig",
+				url("server", "PlantUML 服务器地址", {
+					required: true,
+					urlPrefixes: ["http://", "https://"],
+				}),
+			),
+			binding("plantumlConfig", text("lightTheme", "亮色主题名（留空使用默认）", { maxLength: 60 })),
+			binding("plantumlConfig", text("darkTheme", "暗色主题名（留空使用默认）", { maxLength: 60 })),
+		],
+	},
+	{
+		key: "font",
+		label: "字体",
+		section: "settings",
+		description:
+			"自定义字体开关与全局/分区字体选择；字体定义列表（fontsList）与子集化配置仍由仓库维护。",
+		filePath: "src/config/fontConfig.ts",
+		fields: [
+			binding("fontConfig", boolean("enable", "启用自定义字体")),
+			binding(
+				"fontConfig",
+				tags("selected", "全局字体 CSS 变量", "填 fontsList 中的 cssVariable，填 system 使用系统字体"),
+			),
+			binding("fontConfig", text("bannerTitleFont", "横幅主标题字体", { maxLength: 60 })),
+			binding("fontConfig", text("bannerSubtitleFont", "横幅副标题字体", { maxLength: 60 })),
+			binding("fontConfig", text("navbarTitleFont", "导航栏标题字体", { maxLength: 60 })),
+			binding("fontConfig", text("codeFont", "代码块字体", { maxLength: 60 })),
+		],
+	},
+
 	{
 		key: "site",
 		label: "站点信息",

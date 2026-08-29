@@ -24,6 +24,15 @@ export const CONFIG_FILE_PATHS = [
 	"src/config/footerConfig.ts",
 	"src/config/FooterConfig.html",
 	"src/config/toolsConfig.ts",
+	"src/config/musicConfig.ts",
+	"src/config/backgroundWallpaper.ts",
+	"src/config/effectsConfig.ts",
+	"src/config/pioConfig.ts",
+	"src/config/homePortfolioIntro.ts",
+	"src/config/expressiveCodeConfig.ts",
+	"src/config/plantumlConfig.ts",
+	"src/config/fontConfig.ts",
+	"src/config/coverImageConfig.ts",
 ] as const;
 
 const allowedExactPaths = new Set<string>([

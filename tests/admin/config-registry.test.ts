@@ -127,6 +127,28 @@ test("列表字段增删项可以补丁并重新解析", () => {
 	);
 });
 
+test("嵌套音乐播放列表的歌曲字段可以补丁并重新解析", () => {
+	const group = CONFIG_GROUPS.find((item) => item.key === "music");
+	assert.ok(group);
+	const source = readRepoFile(group.filePath);
+	const values = parseGroupValues(source, group);
+	const listId = "musicPlayerConfig.local.playlist";
+	const playlist = values[listId];
+	assert.ok(Array.isArray(playlist) && playlist.length > 0);
+	const firstSong = { ...(playlist[0] as Record<string, unknown>), name: "后台改名歌曲" };
+	const result = applyGroupValues(source, group, {
+		...values,
+		[listId]: [firstSong],
+	});
+	assert.ok(result.content);
+	assert.deepEqual(result.changed, [listId]);
+	const reparsed = parseGroupValues(result.content, group);
+	const updated = reparsed[listId];
+	assert.ok(Array.isArray(updated) && updated.length === 1);
+	assert.equal((updated[0] as Record<string, unknown>).name, "后台改名歌曲");
+	assert.equal((updated[0] as Record<string, unknown>).url, (playlist[0] as Record<string, unknown>).url);
+});
+
 test("校验器拒绝非法值并接受合法值", () => {
 	const group = CONFIG_GROUPS.find((item) => item.key === "site");
 	assert.ok(group);

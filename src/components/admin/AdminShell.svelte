@@ -41,6 +41,7 @@ const navigation: {
 			{ id: "announcement", label: "公告", icon: "♪" },
 			{ id: "sponsor", label: "赞助", icon: "♡" },
 			{ id: "tools", label: "工具页", icon: "⚒" },
+			{ id: "music", label: "音乐", icon: "♫" },
 		],
 	},
 	{ heading: "资产", items: [{ id: "media", label: "媒体库", icon: "▧" }] },

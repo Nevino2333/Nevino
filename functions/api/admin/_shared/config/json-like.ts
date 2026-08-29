@@ -128,6 +128,15 @@ const readIdentifier = (
 	return { value: source.slice(index, cursor), end: cursor };
 };
 
+// 允许值之后紧跟 `as const` 断言尾巴（span 不含尾巴，补丁可安全替换值本身）
+const skipAsConst = (source: string, index: number): number => {
+	const afterAs = skipTrivia(source, index);
+	if (!source.startsWith("as", afterAs)) return index;
+	const afterAsKeyword = skipTrivia(source, afterAs + 2);
+	if (!source.startsWith("const", afterAsKeyword)) return index;
+	return skipTrivia(source, afterAsKeyword + 5);
+};
+
 const parseNode = (
 	source: string,
 	index: number,
@@ -165,7 +174,7 @@ const parseNode = (
 			if (source[cursor] !== ":") throw new LiteralParseError("对象缺少冒号");
 			const parsed = parseNode(source, cursor + 1);
 			members.set(key, parsed.node);
-			cursor = skipTrivia(source, parsed.next);
+			cursor = skipTrivia(source, skipAsConst(source, parsed.next));
 			if (source[cursor] === ",") {
 				cursor += 1;
 				continue;
@@ -189,7 +198,7 @@ const parseNode = (
 		for (;;) {
 			const parsed = parseNode(source, cursor);
 			items.push(parsed.node);
-			cursor = skipTrivia(source, parsed.next);
+			cursor = skipTrivia(source, skipAsConst(source, parsed.next));
 			if (source[cursor] === ",") {
 				cursor += 1;
 				cursor = skipTrivia(source, cursor);

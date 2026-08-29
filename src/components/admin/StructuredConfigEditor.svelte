@@ -85,6 +85,11 @@ const isRef = (value: unknown): boolean =>
 
 function setValue(id: string, value: unknown) {
 	if (!detail) return;
+	const itemMatch = /^(.*)\[(\d+)\]\.([^.]+)$/.exec(id);
+	if (itemMatch) {
+		setListItem(itemMatch[1], Number(itemMatch[2]), itemMatch[3], value);
+		return;
+	}
 	detail.values = { ...detail.values, [id]: value };
 	fieldErrors = { ...fieldErrors, [id]: "" };
 }

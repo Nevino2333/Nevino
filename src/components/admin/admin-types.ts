@@ -8,6 +8,7 @@ export type AdminView =
 	| "announcement"
 	| "sponsor"
 	| "tools"
+	| "music"
 	| "settings"
 	| "publishing"
 	| "security";
