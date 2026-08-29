@@ -67,3 +67,7 @@ package/
 
 # accidental nested copy
 Firefly-master/
+.mimosa/
+.v2c/
+.video_agent/
+push-admin.cmd

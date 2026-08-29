@@ -3,8 +3,8 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { existsSync } from "node:fs";
 
-const root = process.cwd();
-const postsRoot = path.join(root, "src", "content", "posts");
+// 模块位置静态可推导：文章根目录固定为本仓库 src/content/posts，不引入运行时环境输入
+const postsRoot = path.resolve(import.meta.dirname, "..", "src", "content", "posts");
 const port = Number(process.env.POST_STUDIO_PORT || 4323);
 
 const html = String.raw`<!doctype html>
