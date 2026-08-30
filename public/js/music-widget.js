@@ -478,6 +478,16 @@
         updatePlaylistActiveUI(d.index);
     });
 
+    on('fm:buffering', function (e) {
+        if (!ui.loading) return;
+        var stalled = e.detail && e.detail.stalled;
+        ui.loading.setAttribute('aria-label', stalled ? '网络较慢，正在缓冲音频' : '音频正在缓冲');
+        if (stalled) {
+            ui.loading.classList.remove('opacity-0', 'pointer-events-none');
+            ui.loading.classList.add('opacity-100');
+        }
+    });
+
     on('fm:play-state', function (e) {
         updatePlayStateUI(e.detail.isPlaying);
     });
@@ -488,6 +498,10 @@
         if (isLoading) {
             updatePlayStateUI(true);
         } else {
+            if (ui.loading) {
+                ui.loading.classList.add('opacity-0', 'pointer-events-none');
+                ui.loading.classList.remove('opacity-100');
+            }
             updatePlayStateUI(mgr.getState().isPlaying);
         }
     });

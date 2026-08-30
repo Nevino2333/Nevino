@@ -131,6 +131,7 @@ const musicViewCfgStr = JSON.stringify({
     var lyricsController = null;
     var lyricCursor = -1;
     var lastTimeBroadcast = 0;
+    var bufferingTimer = null;
     var state = {
         playlist: [],
         currentIndex: 0,
@@ -480,10 +481,31 @@ const musicViewCfgStr = JSON.stringify({
     });
 
     audio.addEventListener('waiting', function () {
-        if (state.isPlaying) setLoading(true);
+        if (state.isPlaying) {
+            setLoading(true);
+            if (bufferingTimer) clearTimeout(bufferingTimer);
+            bufferingTimer = setTimeout(function () {
+                if (state.isPlaying && audio.readyState < 3) {
+                    emit('fm:buffering', { stalled: true });
+                }
+            }, 3000);
+        }
+    });
+
+    audio.addEventListener('stalled', function () {
+        if (state.isPlaying) emit('fm:buffering', { stalled: true });
+    });
+
+    audio.addEventListener('progress', function () {
+        if (state.isPlaying && audio.buffered.length > 0) {
+            var ahead = audio.buffered.end(audio.buffered.length - 1) - audio.currentTime;
+            emit('fm:buffering', { stalled: false, bufferedAhead: ahead });
+        }
     });
 
     audio.addEventListener('playing', function () {
+        if (bufferingTimer) clearTimeout(bufferingTimer);
+        bufferingTimer = null;
         setLoading(false);
         state.isPlaying = true;
         emitPlayState();
