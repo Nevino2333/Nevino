@@ -119,7 +119,8 @@ const musicViewCfgStr = JSON.stringify({
     // ── Audio element (persistent, attached to body) ────────
     var audio = document.createElement('audio');
     audio.crossOrigin = 'anonymous';
-    audio.preload = 'none';
+    // Metadata is enough for duration without downloading the full track up front.
+    audio.preload = 'metadata';
     audio.pause();
     audio.style.display = 'none';
     document.body.appendChild(audio);
@@ -127,6 +128,9 @@ const musicViewCfgStr = JSON.stringify({
     // ── State ────────────────────────────────────────────────
     var loadVersion = 0; // incremented on each loadTrack to discard stale play() results
     var lyricsLoadedFor = -1; // 已加载歌词的曲目索引，歌词延迟到首次播放才请求
+    var lyricsController = null;
+    var lyricCursor = -1;
+    var lastTimeBroadcast = 0;
     var state = {
         playlist: [],
         currentIndex: 0,
@@ -161,6 +165,32 @@ const musicViewCfgStr = JSON.stringify({
     function setLoading(isLoading) {
         state.isLoading = isLoading;
         emit('fm:loading', { isLoading: isLoading });
+    }
+
+    function playWhenReady(ver) {
+        return new Promise(function (resolve, reject) {
+            if (ver !== loadVersion) return reject(new DOMException('Stale playback request', 'AbortError'));
+            var settled = false;
+            var cleanup = function () {
+                audio.removeEventListener('canplay', onReady);
+                audio.removeEventListener('error', onError);
+            };
+            var onReady = function () {
+                if (settled || ver !== loadVersion) return;
+                settled = true;
+                cleanup();
+                audio.play().then(resolve).catch(reject);
+            };
+            var onError = function () {
+                if (settled) return;
+                settled = true;
+                cleanup();
+                reject(new Error('Audio is not available'));
+            };
+            audio.addEventListener('canplay', onReady, { once: true });
+            audio.addEventListener('error', onError, { once: true });
+            if (audio.readyState >= 3) onReady();
+        });
     }
 
     // ── Meting fetch ─────────────────────────────────────────
@@ -205,27 +235,34 @@ const musicViewCfgStr = JSON.stringify({
 
     // ── Lyrics ───────────────────────────────────────────────
     function loadLyrics(track) {
+        if (lyricsController) lyricsController.abort();
+        lyricsController = null;
         state.lyrics = [];
         state.currentLrcIndex = -1;
+        lyricCursor = -1;
 
         if (!track.lrc) {
             emit('fm:lyrics', { lyrics: [], status: 'none' });
             return;
         }
 
+        var requestedVersion = loadVersion;
         var isLrcUrl = /^(https?:)?\/\//.test(track.lrc)
             || track.lrc.startsWith('/')
             || /\.(lrc|txt)(\?|#|$)/i.test(track.lrc);
 
         if (isLrcUrl) {
+            lyricsController = new AbortController();
             emit('fm:lyrics', { lyrics: [], status: 'loading' });
-            fetch(track.lrc)
+            fetch(track.lrc, { signal: lyricsController.signal })
                 .then(function (r) { return r.text(); })
                 .then(function (text) {
+                    if (requestedVersion !== loadVersion) return;
                     state.lyrics = parseLRC(text);
                     emit('fm:lyrics', { lyrics: state.lyrics, status: 'loaded' });
                 })
-                .catch(function () {
+                .catch(function (error) {
+                    if (error.name === 'AbortError' || requestedVersion !== loadVersion) return;
                     state.lyrics = [];
                     emit('fm:lyrics', { lyrics: [], status: 'failed' });
                 });
@@ -254,7 +291,8 @@ const musicViewCfgStr = JSON.stringify({
 
         if (autoPlay) {
             setLoading(true);
-            audio.play().then(function () {
+            audio.load();
+            playWhenReady(ver).then(function () {
                 if (ver !== loadVersion) return; // stale, discard
                 setLoading(false);
                 state.isPlaying = true;
@@ -276,7 +314,9 @@ const musicViewCfgStr = JSON.stringify({
 
     // ── Playback controls ────────────────────────────────────
     function togglePlay() {
-        if (state.isPlaying || state.isLoading) {
+        // A second click during network buffering should not abort the pending play.
+        if (state.isLoading && !state.isPlaying) return;
+        if (state.isPlaying) {
             loadVersion++;
             audio.pause();
             setLoading(false);
@@ -293,7 +333,8 @@ const musicViewCfgStr = JSON.stringify({
                 loadLyrics(currentTrack);
             }
             setLoading(true);
-            audio.play().then(function () {
+            audio.load();
+            playWhenReady(ver).then(function () {
                 if (ver !== loadVersion) return;
                 setLoading(false);
                 state.isPlaying = true;
@@ -317,8 +358,16 @@ const musicViewCfgStr = JSON.stringify({
     function playNext(auto) {
         if (state.playMode === 1 && auto) {
             audio.currentTime = 0;
+            var ver = ++loadVersion;
             setLoading(true);
-            audio.play();
+            playWhenReady(ver).then(function () {
+                if (ver !== loadVersion) return;
+                setLoading(false);
+                state.isPlaying = true;
+                emitPlayState();
+            }).catch(function () {
+                if (ver === loadVersion) setLoading(false);
+            });
             return;
         }
         var nextIndex;
@@ -386,6 +435,9 @@ const musicViewCfgStr = JSON.stringify({
     // ── Audio events → broadcast ─────────────────────────────
     audio.addEventListener('timeupdate', function () {
         if (isNaN(audio.duration)) return;
+        var now = performance.now();
+        if (now - lastTimeBroadcast < 200) return;
+        lastTimeBroadcast = now;
         var ct = audio.currentTime;
         var dur = audio.duration;
         var pct = (ct / dur) * 100;
@@ -398,16 +450,17 @@ const musicViewCfgStr = JSON.stringify({
             durationStr: formatTime(dur)
         });
 
-        // Lyrics sync
+        // Lyrics sync uses a forward cursor during normal playback, avoiding a full scan per tick.
         if (state.lyrics.length > 0) {
-            var idx = -1;
-            for (var i = 0; i < state.lyrics.length; i++) {
-                if (ct >= state.lyrics[i].time) idx = i;
-                else break;
+            if (lyricCursor >= state.lyrics.length || (lyricCursor >= 0 && ct < state.lyrics[lyricCursor].time)) {
+                lyricCursor = -1;
             }
-            if (idx !== state.currentLrcIndex) {
-                state.currentLrcIndex = idx;
-                emit('fm:lrc-index', { index: idx });
+            while (lyricCursor + 1 < state.lyrics.length && ct >= state.lyrics[lyricCursor + 1].time) {
+                lyricCursor++;
+            }
+            if (lyricCursor !== state.currentLrcIndex) {
+                state.currentLrcIndex = lyricCursor;
+                emit('fm:lrc-index', { index: lyricCursor });
             }
         }
     });

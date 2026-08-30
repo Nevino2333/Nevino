@@ -396,7 +396,7 @@ const hasMultipleImages =
                     widths={[640, 750, 1080]}
                     sizes="100vw"
                     loading={index === 0 ? "eager" : "lazy"}
-                    fetchpriority={index === 0 ? "high" : undefined}
+                    fetchpriority={index === 0 ? "auto" : undefined}
                     defer={index !== 0}
                     quality={mobileQuality}
                 />
@@ -413,7 +413,7 @@ const hasMultipleImages =
                     widths={[1280, 1920, 2560]}
                     sizes="100vw"
                     loading={index === 0 ? "eager" : "lazy"}
-                    fetchpriority={index === 0 ? "high" : undefined}
+                    fetchpriority={index === 0 ? "auto" : undefined}
                     defer={index !== 0}
                     quality={configQuality}
                 />

@@ -107,8 +107,10 @@ export default defineConfig({
 				"#floating-toc-wrapper",
 			],
 			smoothScrolling: false,
-			cache: true,
-			preload: true,
+				cache: true,
+				// 不预取所有导航页，避免在国内慢网下与音乐/壁纸/正文图片争抢带宽。
+				// 已访问页面仍由 cache 提供瞬时返回，导航体验不受明显影响。
+				preload: false,
 			accessibility: true,
 			// The portfolio is a deliberately full-bleed layout and does not use the
 			// standard MainGridLayout Swup containers. Crossing this layout boundary
