@@ -1,0 +1,2 @@
+/* Giscus 延迟加载锚点：保留可观察尺寸但不改变评论区布局 */
+.giscus-lazy-anchor{width:1px;height:1px;margin-top:-1px;opacity:0;pointer-events:none}
