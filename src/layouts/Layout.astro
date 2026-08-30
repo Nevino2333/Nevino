@@ -143,9 +143,7 @@ const siteLang = lang.replace("_", "-");
     <VisitStats />
 
     <title>{pageTitle}</title>
-    <!-- 欢迎提示会请求 IP 归属地 API，提前建立连接减少首屏后的等待 -->
-    <link rel="preconnect" href="https://v2.xxapi.cn" crossorigin />
-    <link rel="dns-prefetch" href="https://v2.xxapi.cn" />
+    <!-- IP 归属地只是欢迎提示的非关键增强，不预先抢占国内网络连接 -->
     <meta
       name="description"
       content={description || siteConfig.description || pageTitle}
