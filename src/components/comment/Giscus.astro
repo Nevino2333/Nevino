@@ -1,5 +1,6 @@
 ---
 import { commentConfig } from "@/config";
+import "@/styles/giscus.css";
 
 if (!commentConfig?.giscus) {
 	throw new Error("Giscus comments are not configured");
@@ -30,7 +31,7 @@ const giscusOptions = {
   且国内访问不稳定，会导致评论区持续空白，故改用官方脚本嵌入。
   初始 data-theme 由内联脚本按当前明暗动态生成，避免暗色用户首屏闪白。
 -->
-<template id="giscus-theme-anchor"></template>
+<div id="giscus-theme-anchor" class="giscus-lazy-anchor" aria-hidden="true"></div>
 
 <script is:inline define:vars={{ giscusOptions, lightTheme, darkTheme }}>
   (() => {
