@@ -115,7 +115,9 @@ export const siteConfig: SiteConfig = {
 		// 相册页面开关
 		gallery: true,
 		// 追番页面开关
-		// 未配置 bilibili.uid 且无 anime-list.json 数据前保持关闭，否则页面显示"未配置追番数据源"
+		// 已填 bilibili.uid，但 B 站隐私设置尚未公开追番列表（接口返回 53013），
+		// 公开方法：B 站 App/网页 → 设置 → 隐私设置 → 空间隐私设置 → 公开"我的追番追剧"，
+		// 开启后把此处改回 true 并重新构建
 		anime: false,
 	},
 
@@ -194,7 +196,7 @@ export const siteConfig: SiteConfig = {
 		// Bilibili 配置
 		bilibili: {
 			// 你的 Bilibili 用户 UID（部署后填写你自己的 UID）
-			uid: "",
+			uid: "515112274",
 		},
 		// TMDB 配置（可选，需要翻墙）
 		// tmdb: {
