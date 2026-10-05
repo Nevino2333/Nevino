@@ -1,0 +1,140 @@
+---
+import { Icon } from "astro-icon/components";
+
+// 文章朗读：浏览器原生 speechSynthesis，零后端、零 API 成本。
+// 文本从 #post-container 采集（剔除代码块等），分句交给合成队列播放。
+---
+
+<button
+	id="post-tts-btn"
+	type="button"
+	class="transition h-6 w-6 rounded-md bg-black/5 dark:bg-white/10 text-black/50 dark:text-white/50 flex items-center justify-none hover:text-[var(--primary)]"
+	aria-pressed="false"
+	title="朗读本文"
+	data-tts-state="idle"
+>
+	<Icon is:inline name="material-symbols:volume-up-rounded" class="text-[1.1rem]" />
+</button>
+
+<script>
+	(() => {
+		const ttsWindow = window as Window & {
+			__postTtsInitialized?: boolean;
+			__postTtsBind?: () => void;
+		};
+		if (ttsWindow.__postTtsInitialized) {
+			ttsWindow.__postTtsBind?.();
+			return;
+		}
+		ttsWindow.__postTtsInitialized = true;
+
+		const synth = window.speechSynthesis;
+		if (!synth) return;
+		let chunks: string[] = [];
+		let index = 0;
+		let state: "idle" | "speaking" | "paused" = "idle";
+		let btn: HTMLButtonElement | null = null;
+
+		const setUi = (next: "idle" | "speaking" | "paused", title?: string) => {
+			state = next;
+			if (!btn) return;
+			btn.dataset.ttsState = next;
+			btn.setAttribute("aria-pressed", String(next !== "idle"));
+			if (title) btn.title = title;
+		};
+
+		const collectText = (): string => {
+			const container = document.getElementById("post-container");
+			if (!container) return "";
+			const clone = container.cloneNode(true) as HTMLElement;
+			clone
+				.querySelectorAll(
+					"pre, code, script, style, nav, button, figure, #post-tts-btn",
+				)
+				.forEach((el) => el.remove());
+			return (clone.textContent || "").replace(/\s+/g, " ").trim().slice(0, 20000);
+		};
+
+		const chunkText = (text: string): string[] => {
+			// 按句切分并合并到 ~180 字符，长句型语音合成更稳
+			const sentences =
+				text.match(/[^。！？!?；;]*[。！？!?；;]|[^。！？!?；;]+$/g) || [];
+			const merged: string[] = [];
+			let buffer = "";
+			for (const sentence of sentences) {
+				if ((buffer + sentence).length > 180 && buffer) {
+					merged.push(buffer);
+					buffer = sentence;
+				} else {
+					buffer += sentence;
+				}
+			}
+			if (buffer) merged.push(buffer);
+			return merged;
+		};
+
+		const stop = () => {
+			synth.cancel();
+			chunks = [];
+			index = 0;
+			setUi("idle", "朗读本文");
+		};
+
+		const speakNext = () => {
+			if (state === "idle" || index >= chunks.length) {
+				stop();
+				return;
+			}
+			const utterance = new SpeechSynthesisUtterance(chunks[index]);
+			utterance.lang = "zh-CN";
+			utterance.rate = 1;
+			const voice = synth
+				.getVoices()
+				.find((item) => item.lang?.toLowerCase().startsWith("zh"));
+			if (voice) utterance.voice = voice;
+			utterance.onend = () => {
+				if (state !== "speaking") return;
+				index += 1;
+				speakNext();
+			};
+			utterance.onerror = () => stop();
+			synth.speak(utterance);
+		};
+
+		const start = () => {
+			const text = collectText();
+			if (!text) return;
+			chunks = chunkText(text);
+			index = 0;
+			setUi("speaking", "暂停朗读");
+			speakNext();
+		};
+
+		const toggle = () => {
+			if (state === "idle") {
+				start();
+			} else if (state === "speaking") {
+				synth.pause();
+				setUi("paused", "继续朗读");
+			} else if (state === "paused") {
+				synth.resume();
+				setUi("speaking", "暂停朗读");
+			}
+		};
+
+		ttsWindow.__postTtsBind = () => {
+			const nextBtn = document.getElementById(
+				"post-tts-btn",
+			) as HTMLButtonElement | null;
+			if (!nextBtn || nextBtn === btn) return;
+			if (btn) btn.removeEventListener("click", toggle);
+			btn = nextBtn;
+			btn.addEventListener("click", toggle);
+			// 页面切换（Swup）后旧内容已不在，停止上一页的朗读
+			if (state !== "idle") stop();
+		};
+		ttsWindow.__postTtsBind();
+		document.addEventListener("swup:contentReplaced", () => stop());
+		window.addEventListener("beforeunload", () => stop());
+	})();
+</script>

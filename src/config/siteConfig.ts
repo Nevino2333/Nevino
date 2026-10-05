@@ -110,11 +110,13 @@ export const siteConfig: SiteConfig = {
 		// 留言板页面开关，需要配置评论系统
 		guestbook: true,
 		// 番组计划页面开关，含追番、游戏、书籍和音乐
-		bangumi: true,
+		// 未配置 bangumi.userId 前保持关闭，否则页面会把配置报错暴露给读者；填好 ID 后改回 true
+		bangumi: false,
 		// 相册页面开关
 		gallery: true,
 		// 追番页面开关
-		anime: true,
+		// 未配置 bilibili.uid 且无 anime-list.json 数据前保持关闭，否则页面显示"未配置追番数据源"
+		anime: false,
 	},
 
 	// 分类导航栏开关，在首页和归档页顶部显示分类快捷导航
@@ -165,7 +167,8 @@ export const siteConfig: SiteConfig = {
 		// 是否开启分享海报生成功能
 		sharePoster: true,
 		// OpenGraph图片功能，注意开启后要渲染很长时间，不建议本地调试的时候开启
-		generateOgImages: false,
+		// 文章量小（当前仅个位数），构建耗时增加可接受；开启后分享卡片才有图
+		generateOgImages: true,
 	},
 
 	// bangumi配置

@@ -105,6 +105,9 @@ export async function GET({
 	// Avatar + icon: still read from disk (small assets)
 	let avatarBase64: string;
 
+	// 本地路径可能带 ？v=xxx 缓存参数，readFileSync 不认，读取前剥掉
+	const stripCacheBust = (value: string): string => value.split("?")[0];
+
 	// 检查头像是否为 URL
 	if (profileConfig.avatar?.startsWith("http")) {
 		// 如果是 URL，直接使用
@@ -114,7 +117,7 @@ export async function GET({
 		const avatarPath = profileConfig.avatar?.startsWith("/")
 			? `./public${profileConfig.avatar}`
 			: `./src/${profileConfig.avatar}`;
-		const avatarBuffer = fs.readFileSync(avatarPath);
+		const avatarBuffer = fs.readFileSync(stripCacheBust(avatarPath));
 		avatarBase64 = `data:image/png;base64,${avatarBuffer.toString("base64")}`;
 	}
 
@@ -122,7 +125,7 @@ export async function GET({
 	if (siteConfig.favicon.length > 0) {
 		iconPath = `./public${siteConfig.favicon[0].src}`;
 	}
-	const iconBuffer = fs.readFileSync(iconPath);
+	const iconBuffer = fs.readFileSync(stripCacheBust(iconPath));
 	const iconBase64 = `data:image/png;base64,${iconBuffer.toString("base64")}`;
 
 	const hue = siteConfig.themeColor.hue;

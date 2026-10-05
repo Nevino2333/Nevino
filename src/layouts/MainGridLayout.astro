@@ -172,6 +172,9 @@ const showBannerPostMeta =
 	!!bannerPostMeta;
 const resolvedBannerPostAiSummary =
 	bannerPostAiSummary?.trim() || description?.trim() || "";
+// 区分真实的 AI 摘要（frontmatter 里手写的 aiSummary）与普通摘要兜底：
+// 兜底时不能标注"AI摘要"，更不能虚构提供方，否则对读者是误导
+const bannerPostAiSummaryIsReal = !!bannerPostAiSummary?.trim();
 const showBannerPostAiSummary =
 	showBannerPostMeta && !!resolvedBannerPostAiSummary;
 
@@ -859,11 +862,10 @@ const hasMultipleImages =
                         )}
                     </div>
                     {showBannerPostAiSummary && (
-                        <div class="banner-post-ai-summary" role="note" aria-label="AI摘要，由 ChatGPT Sol 5.6 Max 提供">
+                        <div class="banner-post-ai-summary" role="note" aria-label={bannerPostAiSummaryIsReal ? "AI摘要" : "摘要"}>
                             <div class="banner-post-ai-summary__label">
                                 <Icon is:inline name="material-symbols:auto-awesome-rounded" class="text-[1.05em]" />
-                                <span>AI摘要</span>
-                                <span class="banner-post-ai-summary__provider">由 ChatGPT Sol 5.6 Max 提供</span>
+                                <span>{bannerPostAiSummaryIsReal ? "AI摘要" : "摘要"}</span>
                             </div>
                             <p aria-live="polite" aria-label={resolvedBannerPostAiSummary}>
                                 <TypewriterText
@@ -1015,11 +1017,10 @@ const hasMultipleImages =
                 <div id="content-wrapper" class="onload-animation transition-leaving">
                     {showBannerPostAiSummary && (
                         <div class="mobile-post-ai-summary-shell">
-                            <div class="banner-post-ai-summary mobile-post-ai-summary" role="note" aria-label="AI摘要，由 ChatGPT Sol 5.6 Max 提供">
+                            <div class="banner-post-ai-summary mobile-post-ai-summary" role="note" aria-label={bannerPostAiSummaryIsReal ? "AI摘要" : "摘要"}>
                                 <div class="banner-post-ai-summary__label">
                                     <Icon is:inline name="material-symbols:auto-awesome-rounded" class="text-[1.05em]" />
-                                    <span>AI摘要</span>
-                                    <span class="banner-post-ai-summary__provider">由 ChatGPT Sol 5.6 Max 提供</span>
+                                    <span>{bannerPostAiSummaryIsReal ? "AI摘要" : "摘要"}</span>
                                 </div>
                                 <p aria-live="polite" aria-label={resolvedBannerPostAiSummary}>
                                     <TypewriterText

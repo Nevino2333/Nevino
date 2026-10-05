@@ -19,6 +19,7 @@ import { Icon } from "astro-icon/components";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import CoverImage from "@/components/common/CoverImage.astro";
+import PostTts from "@/components/common/PostTts.astro";
 import PostMetadata from "@/components/layout/PostMeta.astro";
 import RecommendedPost from "@/components/misc/RecommendedPost.astro";
 import SharePoster from "@/components/misc/SharePoster.svelte";
@@ -123,6 +124,9 @@ const jsonLd = {
 	headline: entry.data.title,
 	description: entry.data.description || entry.data.title,
 	keywords: entry.data.tags,
+	image: siteConfig.post.generateOgImages
+		? new URL(`/og/${entry.id}.png`, Astro.site).toString()
+		: undefined,
 	author: {
 		"@type": "Person",
 		name: profileConfig.name,
@@ -132,7 +136,6 @@ const jsonLd = {
 	inLanguage: entry.data.lang
 		? entry.data.lang.replace("_", "-")
 		: siteConfig.lang.replace("_", "-"),
-	// TODO include cover image here
 };
 
 const relatedPosts = await getRelatedPosts(entry, 5);
@@ -190,19 +193,20 @@ const relatedPosts = await getRelatedPosts(entry, 5);
           >
             <Icon is:inline name="material-symbols:schedule-outline-rounded" />
           </div>
-          <div class="text-sm">
-            {remarkPluginFrontmatter.minutes}
-            {
-              " " +
-                i18n(
-                  remarkPluginFrontmatter.minutes === 1
-                    ? I18nKey.minuteCount
-                    : I18nKey.minutesCount
-                )
-            }
-          </div>
-        </div>
-        {entry.data.password && (
+					<div class="text-sm">
+						{remarkPluginFrontmatter.minutes}
+						{
+							" " +
+							i18n(
+								remarkPluginFrontmatter.minutes === 1
+									? I18nKey.minuteCount
+									: I18nKey.minutesCount,
+							)
+						}
+					</div>
+				</div>
+				<PostTts />
+				{entry.data.password && (
           <div class="flex flex-row items-center">
             <div
               class="transition h-6 w-6 rounded-md bg-black/5 dark:bg-white/10 text-black/50 dark:text-white/50 flex items-center justify-center mr-2"
