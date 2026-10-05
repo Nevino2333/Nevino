@@ -115,10 +115,8 @@ export const siteConfig: SiteConfig = {
 		// 相册页面开关
 		gallery: true,
 		// 追番页面开关
-		// 已填 bilibili.uid，但 B 站隐私设置尚未公开追番列表（接口返回 53013），
-		// 公开方法：B 站 App/网页 → 设置 → 隐私设置 → 空间隐私设置 → 公开"我的追番追剧"，
-		// 开启后把此处改回 true 并重新构建
-		anime: false,
+		// bilibili.uid 已配置且追番列表已公开（追番 2 + 追剧 9）
+		anime: true,
 	},
 
 	// 分类导航栏开关，在首页和归档页顶部显示分类快捷导航
