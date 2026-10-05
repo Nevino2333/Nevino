@@ -13,6 +13,7 @@ import json
 import logging
 import math
 import os
+import re
 import secrets
 import smtplib
 import sqlite3
@@ -27,13 +28,24 @@ from email.message import EmailMessage
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from string import Template
 from typing import Any
 
-def render_template_page(template: Template, **values: str) -> str:
-	"""渲染管理页模板。string.Template 仅做 $ 占位替换，值不会再次求值；
-	使用 safe_substitute 使未知占位符保持原样而不抛错。"""
-	return template.safe_substitute(**values)
+# 与 $placeholder/${placeholder} 匹配；$$ 转义为字面 $，其余形态保持原样
+_TEMPLATE_PLACEHOLDER = re.compile(r"\$\$|\$\{[A-Za-z_][A-Za-z0-9_]*\}|\$[A-Za-z_][A-Za-z0-9_]*")
+
+
+def render_template_page(template: str, **values: str) -> str:
+	"""渲染管理页模板：把 $placeholder/${placeholder} 替换为给定值。
+	纯字符串替换，不存在任何表达式求值能力（区别于 Jinja 类引擎）；
+	未知占位符保持原样；调用方负责对动态值先做 html.escape。"""
+	def _replace(match: "re.Match[str]") -> str:
+		token = match.group(0)
+		if token == "$$":
+			return "$"
+		name = token[2:-1] if token.startswith("${") else token[1:]
+		return values[name] if name in values else token
+
+	return _TEMPLATE_PLACEHOLDER.sub(_replace, template)
 
 
 from admin_password import atomic_write, load_password_record, save_password, verify_password, verify_username
@@ -688,7 +700,7 @@ class AdminApplication:
 		self.login_challenges = LoginChallengeStore()
 		self.login_code_send_limiter = LoginCodeSendLimiter()
 		self.login_code_sender = send_login_code
-		self.template = Template(config.template_path.read_text(encoding="utf-8"))
+		self.template = config.template_path.read_text(encoding="utf-8")
 
 
 def load_smtp_config(path: Path) -> dict[str, Any]:

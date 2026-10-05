@@ -1,7 +1,6 @@
 import http from "node:http";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { existsSync } from "node:fs";
 
 // 模块位置静态可推导：文章根目录固定为本仓库 src/content/posts，不引入运行时环境输入
 const postsRoot = path.resolve(import.meta.dirname, "..", "src", "content", "posts");
@@ -417,25 +416,30 @@ async function readBody(req) {
 	return Buffer.concat(chunks).toString("utf8");
 }
 
-function normalizePostPath(fileName, mdx = false) {
-	let normalized = String(fileName || "").trim().replaceAll("\\", "/");
-	normalized = normalized.replace(/^\/+/, "");
-	if (!normalized) throw new Error("请填写文件路径");
-	if (normalized.includes("\0")) throw new Error("文件路径包含非法字符");
-	if (normalized.split("/").includes("..")) {
-		throw new Error("文件路径必须位于 src/content/posts 内");
+// 文件路径白名单：目录段与文件名只允许中英文、数字、下划线、连字符。
+// 用锚定正则的捕获组"提取"安全值，而不是把用户输入透传给文件系统，
+// 因此路径修饰符（..、绝对路径、盘符、特殊字符）根本无法进入 fs 调用。
+const POST_PATH_PATTERN = /^((?:[\w\u4e00-\u9fff-]+\/)*[\w\u4e00-\u9fff-]+)$/;
+
+function resolveTargetFile(fileName, mdx = false) {
+	const stripped = String(fileName ?? "")
+		.trim()
+		.replaceAll("\\", "/")
+		.replace(/^\/+/, "")
+		.replace(/\.(md|mdx)$/i, "");
+	const safe = stripped.match(POST_PATH_PATTERN)?.[1];
+	if (!safe) {
+		throw new Error("文件名只能包含中英文、数字、下划线、连字符，目录用 / 分隔");
 	}
-	if (!/\.(md|mdx)$/i.test(normalized)) normalized += mdx ? ".mdx" : ".md";
-	const target = path.resolve(postsRoot, normalized);
-	const relative = path.relative(postsRoot, target);
-	if (
-		relative === "" ||
-		relative.startsWith("..") ||
-		path.isAbsolute(relative)
-	) {
-		throw new Error("文件路径必须位于 src/content/posts 内");
-	}
-	return relative.replaceAll("\\", "/");
+	return `${safe}${mdx ? ".mdx" : ".md"}`;
+}
+
+// 仅用于字符串相等性比较，不参与任何文件系统操作
+function normalizeRelativeForCompare(value) {
+	return String(value ?? "")
+		.trim()
+		.replaceAll("\\", "/")
+		.replace(/^\/+/, "");
 }
 
 function yamlString(value) {
@@ -534,7 +538,12 @@ async function handleApi(req, res, url) {
 		return sendJson(res, 200, posts);
 	}
 	if (url.pathname === "/api/post" && req.method === "GET") {
-		const file = normalizePostPath(url.searchParams.get("file"));
+		// 只在服务端枚举出的文件列表里做精确匹配，用户输入永远不参与路径拼接
+		const files = await listMarkdownFiles();
+		const requested = normalizeRelativeForCompare(url.searchParams.get("file"));
+		const candidates = [requested, `${requested}.md`, `${requested}.mdx`];
+		const file = files.find((f) => candidates.includes(f));
+		if (!file) return sendJson(res, 404, { error: "文件不存在" });
 		const content = await fs.readFile(path.join(postsRoot, file), "utf8");
 		return sendJson(res, 200, parsePost(file, content));
 	}
@@ -545,10 +554,12 @@ async function handleApi(req, res, url) {
 	if (url.pathname === "/api/save" && req.method === "POST") {
 		const data = JSON.parse(await readBody(req));
 		if (!data.title) throw new Error("请填写标题");
-		const file = normalizePostPath(data.fileName, data.mdx);
-		const target = path.join(postsRoot, file);
-		const currentFile = data.currentFile ? normalizePostPath(data.currentFile, data.mdx) : "";
-		if (existsSync(target) && currentFile !== file) {
+		const files = await listMarkdownFiles();
+		// 新文件名经白名单正则提取；已有的文件名必须与枚举结果精确一致才能覆盖
+		const file = resolveTargetFile(data.fileName, data.mdx);
+		const target = path.join(postsRoot, path.normalize(file));
+		const currentFile = normalizeRelativeForCompare(data.currentFile);
+		if (files.includes(file) && currentFile !== file) {
 			throw new Error(`文件已存在：${file}`);
 		}
 		await fs.mkdir(path.dirname(target), { recursive: true });
@@ -569,6 +580,7 @@ const server = http.createServer(async (req, res) => {
 	}
 });
 
-server.listen(port, () => {
+// 只绑定本机回环地址：这是本地编辑工具，监听所有网卡会把文件读写 API 暴露到局域网
+server.listen(port, "127.0.0.1", () => {
 	console.log(`Firefly Post Studio: http://localhost:${port}`);
 });

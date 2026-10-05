@@ -10,10 +10,12 @@ from __future__ import annotations
 
 import argparse
 import html
+import ipaddress
 import json
 import logging
 import re
 import smtplib
+import socket
 import sqlite3
 import ssl
 import sys
@@ -34,14 +36,71 @@ BEIJING = timezone(timedelta(hours=8), name="Asia/Shanghai")
 BOT_VERSION = "1.1.1"
 
 
+_TRUSTED_HOSTS: set[str] = set()
+
+
+def register_trusted_host(value: str) -> None:
+	"""把配置中会被直接请求的 endpoint 主机加入白名单。
+	部署允许把 Waline 放在本机或内网，因此白名单是唯一放行私网主机的途径。"""
+	raw = value if "//" in value else f"https://{value}"
+	host = (urllib.parse.urlsplit(raw).hostname or "").lower().rstrip(".")
+	if host:
+		_TRUSTED_HOSTS.add(host)
+
+
+def _host_is_fetchable(host: str | None) -> bool:
+	"""主机必须显式在白名单内，或解析为全部公网地址。
+	用于拦截指向环回/内网/链路本地地址的 SSRF（含重定向后的目标）。"""
+	if not host:
+		return False
+	host = host.lower().rstrip(".")
+	if host in _TRUSTED_HOSTS:
+		return True
+	try:
+		infos = socket.getaddrinfo(host, None)
+	except OSError:
+		return False
+	checked = False
+	for info in infos:
+		if info[0] not in (socket.AF_INET, socket.AF_INET6):
+			continue
+		checked = True
+		try:
+			if not ipaddress.ip_address(info[4][0]).is_global:
+				return False
+		except ValueError:
+			return False
+	return checked
+
+
 def validate_http_url(request):
-	"""校验请求目标仅使用 http/https 协议（URL 来自服务端配置，防御协议混用）；
+	"""校验请求目标：仅 http/https、无内嵌凭据、主机可解析且为公网（或在配置白名单内）；
 	校验通过时原样返回 Request 以保留其 headers。"""
 	url = request if isinstance(request, str) else request.full_url
-	parsed = urllib.parse.urlparse(str(url))
+	parsed = urllib.parse.urlsplit(str(url))
 	if parsed.scheme not in ("http", "https"):
 		raise ValueError(f"refusing to request non-http URL: {parsed.scheme!r}")
+	if parsed.username or parsed.password:
+		raise ValueError("refusing to request URL with embedded credentials")
+	if not _host_is_fetchable(parsed.hostname):
+		raise ValueError(f"refusing to request non-public or unknown host: {parsed.hostname!r}")
 	return request
+
+
+class _SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
+	"""urlopen 默认会盲目跟随重定向；本 handler 对每一跳重定向重复 SSRF 校验。"""
+
+	def redirect_request(self, req, fp, code, msg, headers, newurl):
+		validate_http_url(newurl)
+		return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+_SAFE_OPENER = urllib.request.build_opener(_SafeRedirectHandler())
+
+
+def _safe_open(request, *, timeout: float):
+	"""urlopen 的替代入口：所有请求与重定向跳转都经过 validate_http_url 校验。"""
+	return _SAFE_OPENER.open(request, timeout=timeout)
 MAX_PUBLIC_REPLY_CHARS = 280
 PUBLIC_REPLY_DISCLAIMER = (
 	"本信息由Ai自动理解后调用ChatGPT 5.6 Sol Chat（没脑子的）模式下的自动回复，"
@@ -117,6 +176,9 @@ class Config:
 			raise ValueError("unexpected SiliconFlow endpoint")
 		if self.ai_model != "Pro/moonshotai/Kimi-K2.6":
 			raise ValueError("unexpected AI model")
+		# 会被直接请求的 endpoint 主机进入 SSRF 白名单（其余主机必须是公网地址）
+		for endpoint in (self.waline_base_url, self.site_origin, self.ai_endpoint):
+			register_trusted_host(endpoint)
 
 
 @dataclass(frozen=True)
@@ -587,7 +649,7 @@ class Reviewer:
 				url,
 				headers={"User-Agent": f"Rainzt-Waline-AI-Reviewer/{BOT_VERSION}"},
 			)
-			with urllib.request.urlopen(validate_http_url(req), timeout=15) as response:
+			with _safe_open(validate_http_url(req), timeout=15) as response:
 				content_type = response.headers.get_content_type()
 				if content_type not in {"text/html", "application/xhtml+xml"}:
 					raise ValueError(f"page context is not HTML: {content_type}")
@@ -670,7 +732,7 @@ class Reviewer:
 			method="POST",
 		)
 		try:
-			with urllib.request.urlopen(validate_http_url(req), timeout=45) as response:
+			with _safe_open(validate_http_url(req), timeout=45) as response:
 				result = json.load(response)
 		except urllib.error.HTTPError as exc:
 			body = exc.read(4096).decode("utf-8", "replace")
@@ -757,7 +819,7 @@ class Reviewer:
 			},
 			method="POST",
 		)
-		with urllib.request.urlopen(validate_http_url(req), timeout=20) as response:
+		with _safe_open(validate_http_url(req), timeout=20) as response:
 			result = json.load(response)
 		if result.get("errno") not in {None, 0}:
 			raise RuntimeError(f"Waline rejected reply: {result.get('errmsg') or result.get('errno')}")
@@ -958,7 +1020,7 @@ class Reviewer:
 			f"{self.config.waline_base_url}/",
 			headers={"Origin": self.config.site_origin, "Referer": f"{self.config.site_origin}/"},
 		)
-		with urllib.request.urlopen(validate_http_url(req), timeout=10) as response:
+		with _safe_open(validate_http_url(req), timeout=10) as response:
 			if response.status != 200:
 				raise RuntimeError(f"Waline health probe returned {response.status}")
 		if probe_ai:
@@ -978,7 +1040,7 @@ class Reviewer:
 				headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
 				method="POST",
 			)
-			with urllib.request.urlopen(validate_http_url(req), timeout=45) as response:
+			with _safe_open(validate_http_url(req), timeout=45) as response:
 				result = json.load(response)
 			message = ((result.get("choices") or [{}])[0].get("message") or {})
 			if not message.get("content"):
