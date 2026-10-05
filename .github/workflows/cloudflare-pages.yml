@@ -4,6 +4,10 @@ on:
   push:
     branches: [ master ]
   workflow_dispatch:
+  schedule:
+    # 每天 22:00 UTC（北京时间 6:00）自动重建，刷新追番列表等构建期数据；
+    # 定时部署没有等待回调的发布任务，callback 步骤的 404 已按正常处理
+    - cron: "0 22 * * *"
 
 concurrency:
   group: cloudflare-pages-${{ github.ref }}
