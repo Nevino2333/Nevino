@@ -1,3 +1,4 @@
+import { bestEffortAudit, audit } from "../_shared/audit";
 import { query, run } from "../_shared/db";
 import { ApiError } from "../_shared/errors";
 import { adminGet, adminMutation } from "../_shared/handler";
@@ -77,6 +78,26 @@ export const onRequestPost = adminMutation(async (context) => {
 		await bucket.delete(objectKey);
 		throw new ApiError(500, "media_create_failed", "媒体记录创建失败", true);
 	}
+	await bestEffortAudit(() =>
+		audit(
+			context.env,
+			context.session.user_id,
+			"media_upload",
+			context.request,
+			{
+				requestId: context.requestId,
+				resourceType: "media",
+				resourceId: id,
+				result: "success",
+				metadata: {
+					filename: value.name.slice(0, 255),
+					size: value.size,
+					mime: resolved.mime,
+					objectKey,
+				},
+			},
+		),
+	);
 	return {
 		data: {
 			media: withPublicUrl({

@@ -422,6 +422,7 @@ export type PublishTaskRow = {
 	id: string;
 	idempotency_key: string;
 	draft_id: string;
+	draft_title?: string | null;
 	expected_version: number;
 	target_path: string;
 	status: string;
@@ -431,6 +432,7 @@ export type PublishTaskRow = {
 	error_code: string | null;
 	created_at: string;
 	updated_at: string;
+	awaiting_deploy_stale?: boolean;
 };
 
 export type ContentOperationRow = {

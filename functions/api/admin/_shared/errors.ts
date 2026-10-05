@@ -33,6 +33,10 @@ export const errorResponse = (error: unknown, requestId: string): Response => {
 		error instanceof ApiError
 			? error
 			: new ApiError(500, "internal_error", "服务器内部错误", true);
+	if (!(error instanceof ApiError)) {
+		// 未知异常不落日志的话，Workers 里只剩一个 requestId，wrangler tail 也无从排障
+		console.error(`[${requestId}] unhandled admin API error:`, error);
+	}
 	const body: ApiErrorBody = {
 		code: apiError.code,
 		message: apiError.message,

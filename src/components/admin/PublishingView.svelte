@@ -49,8 +49,8 @@ const operationStatusLabels: Record<string, string> = {
 	failed: "失败",
 };
 
-async function load() {
-	loading = true;
+async function load(options: { silent?: boolean } = {}) {
+	if (!options.silent) loading = true;
 	try {
 		const [taskResult, operationResult] = await Promise.all([
 			adminRequest<{ items: PublishTaskRow[] }>("/publish-tasks?limit=50"),
@@ -61,11 +61,29 @@ async function load() {
 		tasks = taskResult.items;
 		operations = operationResult.items;
 	} catch (cause) {
-		onerror(cause instanceof Error ? cause.message : "发布记录加载失败");
+		if (!options.silent)
+			onerror(cause instanceof Error ? cause.message : "发布记录加载失败");
 	} finally {
 		loading = false;
 	}
 }
+
+const ACTIVE_TASK_STATUSES = new Set([
+	"pending",
+	"publishing",
+	"github_committed",
+	"awaiting_deploy",
+]);
+const hasActiveTasks = $derived(tasks.some((row) => ACTIVE_TASK_STATUSES.has(row.status)));
+
+// 有进行中的任务时每 8 秒静默刷新，部署完成后自动停下来
+$effect(() => {
+	if (!hasActiveTasks) return;
+	const timer = setInterval(() => {
+		if (!document.hidden) void load({ silent: true });
+	}, 8000);
+	return () => clearInterval(timer);
+});
 
 async function triggerBuild() {
 	if (!confirm("触发一次 Cloudflare Pages 重新构建？")) return;
@@ -112,7 +130,7 @@ onMount(() => {
 			<p>跟踪发布任务、内容操作与部署状态。</p>
 		</div>
 		<div class="admin-heading-actions">
-			<button class="admin-button admin-button-ghost" onclick={load}>刷新</button>
+			<button class="admin-button admin-button-ghost" onclick={() => load()}>刷新</button>
 			<button class="admin-button" disabled={triggering} onclick={triggerBuild}>{triggering ? "触发中…" : "重新构建站点"}</button>
 		</div>
 	</div>
@@ -132,10 +150,10 @@ onMount(() => {
 				<table class="admin-table">
 					<thead><tr><th>状态</th><th>文章</th><th>提交</th><th>创建时间</th><th>更新时间</th><th>操作</th></tr></thead>
 					<tbody>
-						{#each tasks as row (row.id)}
-							<tr class:alert={row.status === "reconciliation_required" || row.status === "build_failed" || row.status === "submit_failed"}>
-								<td><span class="admin-status-pill admin-status-{row.status}">{taskStatusLabels[row.status] ?? row.status}</span>{#if row.error_code}<small class="admin-muted">{row.error_code}</small>{/if}</td>
-								<td>{#if onopenpost}<button class="admin-link-button" onclick={() => onopenpost(row.draft_id)}>{row.draft_id}</button>{:else}{row.draft_id}{/if}</td>
+							{#each tasks as row (row.id)}
+								<tr class:alert={row.status === "reconciliation_required" || row.status === "build_failed" || row.status === "submit_failed" || row.awaiting_deploy_stale}>
+									<td><span class="admin-status-pill admin-status-{row.status}">{taskStatusLabels[row.status] ?? row.status}</span>{#if row.awaiting_deploy_stale}<small class="admin-muted">超过 30 分钟未收到构建回调，可尝试解除等待</small>{/if}{#if row.error_code}<small class="admin-muted">{row.error_code}</small>{/if}</td>
+									<td>{#if onopenpost}<button class="admin-link-button" onclick={() => onopenpost(row.draft_id)}>{row.draft_title ?? row.draft_id}</button>{:else}{row.draft_title ?? row.draft_id}{/if}<small class="admin-muted">{row.draft_title ? row.draft_id : ""}</small></td>
 								<td><code>{row.github_commit_sha ? row.github_commit_sha.slice(0, 7) : "—"}</code></td>
 								<td>{formatTime(row.created_at)}</td>
 								<td>{formatTime(row.updated_at)}</td>

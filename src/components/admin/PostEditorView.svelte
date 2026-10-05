@@ -1,4 +1,6 @@
 <script lang="ts">
+import { marked } from "marked";
+import sanitizeHtml from "sanitize-html";
 import { AdminApiError, adminRequest } from "./admin-api";
 import type {
 	DraftDetail,
@@ -100,7 +102,45 @@ const editorSnapshot = $derived(
 	}),
 );
 const isDirty = $derived(editorSnapshot !== savedSnapshot);
-const previewText = $derived(renderPlainText(content));
+
+// 预览经 sanitize-html 白名单过滤，脚本/事件属性/iframe 一律剔除
+const PREVIEW_SANITIZE_OPTIONS = {
+	allowedTags: [
+		...sanitizeHtml.defaults.allowedTags,
+		"img",
+		"del",
+		"ins",
+	],
+	allowedAttributes: {
+		...sanitizeHtml.defaults.allowedAttributes,
+		img: ["src", "alt", "title", "loading"],
+		a: ["href", "name", "target", "rel", "title"],
+		code: ["class"],
+		span: ["class"],
+		pre: ["class"],
+		th: ["align"],
+		td: ["align"],
+	},
+	allowedSchemes: ["http", "https", "mailto"],
+	transformTags: {
+		a: sanitizeHtml.simpleTransform("a", {
+			target: "_blank",
+			rel: "noopener noreferrer",
+		}),
+	},
+} satisfies sanitizeHtml.IOptions;
+
+const previewHtml = $derived(
+	editorMode === "preview"
+		? sanitizeHtml(marked.parse(content, { async: false }), PREVIEW_SANITIZE_OPTIONS)
+		: "",
+);
+const previewAvailable = $derived(content.trim().length > 0);
+
+// 本地编辑快照：未保存更改防抖落盘，浏览器崩溃/断电后可恢复
+const LOCAL_DRAFT_PREFIX = "firefly-editor-snapshot:";
+const localDraftKey = $derived(`${LOCAL_DRAFT_PREFIX}${resourceId ?? "new"}`);
+let localDraftReady = $state(false);
 
 $effect(() => {
 	ondirtychange(isDirty);
@@ -109,16 +149,6 @@ const isNew = $derived(resourceId === null);
 const publishBusy = $derived(
 	publishTask ? shouldPollPublishTask(publishTask.status) : false,
 );
-
-function renderPlainText(value: string) {
-	return value
-		.replace(/!\[([^\]]*)\]\([^)]*\)/g, "[图片：$1]")
-		.replace(/\*\*(.+?)\*\*/g, "$1")
-		.replace(/__(.+?)__/g, "$1")
-		.replace(/`([^`]+)`/g, "$1")
-		.replace(/^#{1,6}\s+/gm, "")
-		.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1");
-}
 
 function slugify(value: string) {
 	return (
@@ -231,6 +261,73 @@ $effect(() => {
 	appliedCoverKey = mediaCover.key;
 	image = mediaCover.value;
 });
+
+// 首次加载完成后，检查是否有崩溃/断电留下的本地快照，询问是否恢复
+$effect(() => {
+	if (loading || localDraftReady) return;
+	localDraftReady = true;
+	try {
+		const raw = localStorage.getItem(localDraftKey);
+		if (!raw) return;
+		if (raw === savedSnapshot) {
+			localStorage.removeItem(localDraftKey);
+			return;
+		}
+		const restored = JSON.parse(raw) as Record<string, unknown>;
+		if (!window.confirm("检测到上次未保存的本地编辑快照，是否恢复到编辑器？\n（选择取消将丢弃该快照）")) {
+			localStorage.removeItem(localDraftKey);
+			return;
+		}
+		title = String(restored.title ?? "");
+		slug = String(restored.slug ?? "");
+		published = String(restored.published ?? published);
+		updated = String(restored.updated ?? "");
+		description = String(restored.description ?? "");
+		aiSummary = String(restored.aiSummary ?? "");
+		image = String(restored.image ?? "");
+		tags = String(restored.tags ?? "");
+		category = String(restored.category ?? "");
+		lang = String(restored.lang ?? "zh-CN");
+		pinned = restored.pinned === true;
+		author = String(restored.author ?? "");
+		sourceLink = String(restored.sourceLink ?? "");
+		licenseName = String(restored.licenseName ?? "");
+		licenseUrl = String(restored.licenseUrl ?? "");
+		comment = restored.comment !== false;
+		content = String(restored.content ?? "");
+		onnotice("已恢复本地编辑快照，记得保存");
+	} catch {
+		// 快照损坏时静默丢弃，不影响正常编辑
+		try {
+			localStorage.removeItem(localDraftKey);
+		} catch {}
+	}
+});
+
+// 有未保存更改时防抖写入本地快照；保存成功（isDirty 变 false）后清除
+$effect(() => {
+	if (!localDraftReady) return;
+	if (!isDirty) {
+		localStorage.removeItem(localDraftKey);
+		return;
+	}
+	const snapshot = editorSnapshot;
+	const timer = setTimeout(() => {
+		try {
+			localStorage.setItem(localDraftKey, snapshot);
+		} catch {}
+	}, 1500);
+	return () => clearTimeout(timer);
+});
+
+function handleEditorKeydown(event: KeyboardEvent) {
+	if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== "s")
+		return;
+	event.preventDefault();
+	if (loading || saving || !isDirty) return;
+	if (draft && !draft.capabilities.editable) return;
+	void saveDraft();
+}
 
 function payload(): DraftWrite {
 	const normalizedSlug = slug.trim() || slugify(title);
@@ -439,6 +536,7 @@ $effect(() => {
 });
 </script>
 
+<svelte:window onkeydown={handleEditorKeydown} />
 <section class="admin-editor admin-panel">
 	{#if loading}<div class="admin-state"><span class="admin-spinner"></span><p>正在加载文章详情…</p></div>{:else}
 		<div class="admin-editor-head"><div><p class="admin-kicker">{isNew ? "NEW DRAFT" : "EDIT POST"}</p><h2>{isNew ? "新建文章" : (draft?.title || "编辑文章")}</h2><div class="admin-save-meta"><span class:admin-unsaved={isDirty}><span class="admin-status-dot"></span>{isDirty ? "有未保存更改" : "所有更改已保存"}</span><span>上次保存 {formatSavedAt(lastSavedAt)}</span>{#if draft?.publicationState === "published"}<span class:admin-unsaved={draft.syncStatus === "modified"}>{draft.syncStatus === "modified" ? "未发布修订" : "线上版本"}</span>{/if}</div></div><div class="admin-actions"><button class="admin-button admin-button-primary" disabled={saving || discarding || !title.trim() || (draft !== null && !draft.capabilities.editable)} onclick={saveDraft}>{saving ? "处理中…" : "保存"}</button>{#if !isNew}<button class="admin-button admin-button-ghost" disabled={saving || discarding || isDirty || !draft?.capabilities.publishable || publishBusy} onclick={publishDraft}>{publishBusy ? "发布中…" : "发布"}</button>{#if draft?.capabilities.discardable}<button class="admin-button admin-button-ghost" disabled={saving || discarding || isDirty} onclick={discardRevision}>{discarding ? "恢复中…" : "放弃修订"}</button>{/if}{/if}</div></div>
@@ -447,8 +545,8 @@ $effect(() => {
 		<div class="admin-section-heading"><div><p class="admin-kicker">METADATA</p><h3>文章信息</h3></div><span class="admin-hint">标题为必填项</span></div>
 		<div class="admin-fields"><label class="admin-field-wide">标题<input bind:value={title} placeholder="文章标题" required /></label><label>Slug<input bind:value={slug} disabled={draft?.publicationState === "published"} placeholder="可选，例如 my-first-post" />{#if draft?.publicationState === "published"}<small>线上文章请使用下方重命名操作。</small>{/if}</label><label>语言<input bind:value={lang} placeholder="zh-CN" /></label><label>发布日期<input type="date" bind:value={published} required /></label><label>更新日期<input type="date" bind:value={updated} /></label><label class="admin-field-wide">描述<textarea bind:value={description} rows="3" placeholder="用于列表和分享卡片的文章摘要"></textarea></label><label class="admin-field-wide">AI 摘要<textarea bind:value={aiSummary} rows="3" placeholder="文章的 AI 摘要，可留空"></textarea></label><label class="admin-field-wide">封面图<div class="admin-cover-field"><input bind:value={image} placeholder="/media/cover.webp 或 https://…" /><button type="button" onclick={onmedia}>从媒体库选择</button></div></label><label>标签<input bind:value={tags} placeholder="多个标签用逗号分隔" /></label><label>分类<input bind:value={category} placeholder="文章分类" /></label><label>作者<input bind:value={author} placeholder="文章作者，可留空" /></label><label>来源链接<input type="url" bind:value={sourceLink} placeholder="https://…" /></label><label>许可名称<input bind:value={licenseName} placeholder="例如 CC BY-NC-SA 4.0" /></label><label>许可链接<input type="url" bind:value={licenseUrl} placeholder="https://…" /></label><div class="admin-field-wide admin-switches"><label class="admin-checkbox"><input type="checkbox" bind:checked={pinned} /><span>置顶文章<small>在文章列表中优先展示</small></span></label><label class="admin-checkbox"><input type="checkbox" bind:checked={comment} /><span>开启评论<small>允许读者在文章下留言</small></span></label></div></div>
 		<div class="admin-section-heading admin-writing-heading"><div><p class="admin-kicker">COMPOSE</p><h3>正文内容</h3></div><span class="admin-hint">Markdown · {content.length} 字符</span></div>
-		<div class="admin-editor-tabs" role="tablist" aria-label="正文编辑模式"><button class:active={editorMode === "write"} class="admin-tab" role="tab" aria-selected={editorMode === "write"} onclick={() => editorMode = "write"}>编辑</button><button class:active={editorMode === "preview"} class="admin-tab" role="tab" aria-selected={editorMode === "preview"} onclick={() => editorMode = "preview"}>纯文本预览</button><button class="admin-media-shortcut" onclick={onmedia}>插入图片</button></div>
-		{#if editorMode === "write"}<label class="admin-content-label"><span class="sr-only">Markdown 原文</span><textarea class="admin-textarea" bind:value={content} placeholder="# 从这里开始写作…" spellcheck="false"></textarea></label><p class="admin-shortcut-hint">预览只显示纯文本，不执行 Markdown 中的 HTML 或脚本。</p>{:else}<article class="admin-preview" aria-label="纯文本安全预览">{previewText || "预览会显示在这里。"}</article>{/if}
+		<div class="admin-editor-tabs" role="tablist" aria-label="正文编辑模式"><button class:active={editorMode === "write"} class="admin-tab" role="tab" aria-selected={editorMode === "write"} onclick={() => editorMode = "write"}>编辑</button><button class:active={editorMode === "preview"} class="admin-tab" role="tab" aria-selected={editorMode === "preview"} onclick={() => editorMode = "preview"}>预览</button><button class="admin-media-shortcut" onclick={onmedia}>插入图片</button></div>
+		{#if editorMode === "write"}<label class="admin-content-label"><span class="sr-only">Markdown 原文</span><textarea class="admin-textarea" bind:value={content} placeholder="# 从这里开始写作…" spellcheck="false"></textarea></label><p class="admin-shortcut-hint">Ctrl+S 保存 · 更改会自动留存本地快照，浏览器意外关闭后可恢复。</p>{:else}<article class="admin-preview admin-markdown-preview" aria-label="安全预览">{#if previewAvailable}{@html previewHtml}{:else}<p>预览会显示在这里。</p>{/if}</article>{/if}
 		{#if draft}<PostHistoryPanel {draft} dirty={isDirty} onchanged={reloadDraft} {onerror} {onnotice} /><PostDangerActions {draft} dirty={isDirty} onchanged={reloadDraft} {ondeleted} {onerror} {onnotice} />{/if}
 	{/if}
 </section>
