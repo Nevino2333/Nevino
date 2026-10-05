@@ -29,13 +29,20 @@ import { Icon } from "astro-icon/components";
 		ttsWindow.__postTtsInitialized = true;
 
 		const synth = window.speechSynthesis;
-		if (!synth) return;
+		type TtsState = "idle" | "speaking" | "paused";
+		// Edge TTS 单次合成 500 字左右（约 30 秒音频），失败自动降级浏览器本地合成
+		const EDGE_CHUNK_CHARS = 500;
+		const BROWSER_CHUNK_CHARS = 180;
+		let mode: "edge" | "browser" = "edge";
+		let edgeFailed = false;
 		let chunks: string[] = [];
 		let index = 0;
-		let state: "idle" | "speaking" | "paused" = "idle";
+		let state: TtsState = "idle";
 		let btn: HTMLButtonElement | null = null;
+		let currentAudio: HTMLAudioElement | null = null;
+		let releasePlay: (() => void) | null = null;
 
-		const setUi = (next: "idle" | "speaking" | "paused", title?: string) => {
+		const setUi = (next: TtsState, title?: string) => {
 			state = next;
 			if (!btn) return;
 			btn.dataset.ttsState = next;
@@ -55,14 +62,14 @@ import { Icon } from "astro-icon/components";
 			return (clone.textContent || "").replace(/\s+/g, " ").trim().slice(0, 20000);
 		};
 
-		const chunkText = (text: string): string[] => {
-			// 按句切分并合并到 ~180 字符，长句型语音合成更稳
+		const chunkText = (text: string, maxChars: number): string[] => {
+			// 按句切分并合并到 maxChars 左右，长句型语音合成更稳
 			const sentences =
 				text.match(/[^。！？!?；;]*[。！？!?；;]|[^。！？!?；;]+$/g) || [];
 			const merged: string[] = [];
 			let buffer = "";
 			for (const sentence of sentences) {
-				if ((buffer + sentence).length > 180 && buffer) {
+				if ((buffer + sentence).length > maxChars && buffer) {
 					merged.push(buffer);
 					buffer = sentence;
 				} else {
@@ -74,52 +81,137 @@ import { Icon } from "astro-icon/components";
 		};
 
 		const stop = () => {
-			synth.cancel();
+			state = "idle";
+			if (currentAudio) {
+				const audio = currentAudio;
+				currentAudio = null;
+				audio.onended = null;
+				audio.onerror = null;
+				audio.pause();
+			}
+			if (releasePlay) {
+				const release = releasePlay;
+				releasePlay = null;
+				release();
+			}
+			if (synth) synth.cancel();
 			chunks = [];
 			index = 0;
 			setUi("idle", "朗读本文");
 		};
 
-		const speakNext = () => {
-			if (state === "idle" || index >= chunks.length) {
+		const fetchEdgeAudio = async (text: string): Promise<string> => {
+			const response = await fetch(`/tts?text=${encodeURIComponent(text)}`);
+			if (!response.ok) throw new Error(`tts ${response.status}`);
+			const blob = await response.blob();
+			if (!blob.type.startsWith("audio/")) {
+				throw new Error("tts returned non-audio");
+			}
+			return URL.createObjectURL(blob);
+		};
+
+		const playUrl = (url: string) =>
+			new Promise<void>((resolve) => {
+				const audio = new Audio(url);
+				currentAudio = audio;
+				releasePlay = resolve;
+				audio.onended = () => {
+					if (currentAudio === audio) currentAudio = null;
+					URL.revokeObjectURL(url);
+					resolve();
+				};
+				audio.onerror = () => {
+					if (currentAudio === audio) currentAudio = null;
+					URL.revokeObjectURL(url);
+					resolve();
+				};
+				audio.play().catch(() => resolve());
+			});
+
+		const speakBrowserFrom = (from: number) => {
+			if (!synth) {
 				stop();
 				return;
 			}
-			const utterance = new SpeechSynthesisUtterance(chunks[index]);
-			utterance.lang = "zh-CN";
-			utterance.rate = 1;
-			const voice = synth
-				.getVoices()
-				.find((item) => item.lang?.toLowerCase().startsWith("zh"));
-			if (voice) utterance.voice = voice;
-			utterance.onend = () => {
+			const speakAt = (i: number) => {
 				if (state !== "speaking") return;
-				index += 1;
-				speakNext();
+				if (i >= chunks.length) {
+					stop();
+					return;
+				}
+				index = i;
+				const utterance = new SpeechSynthesisUtterance(chunks[i]);
+				utterance.lang = "zh-CN";
+				const voice = synth
+					.getVoices()
+					.find((item) => item.lang?.toLowerCase().startsWith("zh"));
+				if (voice) utterance.voice = voice;
+				utterance.onend = () => {
+					if (state === "speaking") speakAt(i + 1);
+				};
+				utterance.onerror = () => stop();
+				synth.speak(utterance);
 			};
-			utterance.onerror = () => stop();
-			synth.speak(utterance);
+			speakAt(from);
+		};
+
+		const speakEdgeFrom = async (from: number) => {
+			let prefetch: Promise<string> | null = null;
+			for (let i = from; i < chunks.length; i++) {
+				if (state !== "speaking") return;
+				index = i;
+				let url: string;
+				try {
+					url = await (prefetch ?? fetchEdgeAudio(chunks[i]));
+				} catch {
+					// Edge TTS 不可用（接口变动/网络问题）：本轮及之后回退浏览器合成
+					edgeFailed = true;
+					if (state !== "speaking") return;
+					mode = "browser";
+					speakBrowserFrom(i);
+					return;
+				}
+				// 播放当前句的同时预取下一句，消除句间等待
+				prefetch =
+					i + 1 < chunks.length ? fetchEdgeAudio(chunks[i + 1]) : null;
+				if (state !== "speaking") {
+					URL.revokeObjectURL(url);
+					return;
+				}
+				await playUrl(url);
+				if (state !== "speaking") return;
+			}
+			stop();
 		};
 
 		const start = () => {
 			const text = collectText();
 			if (!text) return;
-			chunks = chunkText(text);
+			const useEdge = mode === "edge" && !edgeFailed;
+			chunks = chunkText(text, useEdge ? EDGE_CHUNK_CHARS : BROWSER_CHUNK_CHARS);
 			index = 0;
 			setUi("speaking", "暂停朗读");
-			speakNext();
+			if (useEdge) void speakEdgeFrom(0);
+			else speakBrowserFrom(0);
 		};
 
 		const toggle = () => {
 			if (state === "idle") {
 				start();
-			} else if (state === "speaking") {
-				synth.pause();
-				setUi("paused", "继续朗读");
-			} else if (state === "paused") {
-				synth.resume();
-				setUi("speaking", "暂停朗读");
+				return;
 			}
+			if (state === "speaking") {
+				if (mode === "edge" && currentAudio) currentAudio.pause();
+				else synth?.pause();
+				setUi("paused", "继续朗读");
+				return;
+			}
+			if (mode === "edge" && currentAudio) {
+				currentAudio.play().catch(() => {});
+			} else {
+				synth?.resume();
+			}
+			setUi("speaking", "暂停朗读");
 		};
 
 		ttsWindow.__postTtsBind = () => {
