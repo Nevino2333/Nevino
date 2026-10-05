@@ -155,8 +155,9 @@ const siteLang = lang.replace("_", "-");
     }
     <meta name="author" content={profileConfig.name} />
 
-    <meta property="og:site_name" content={siteConfig.title} />
-    <meta property="og:url" content={Astro.url} />
+<meta property="og:site_name" content={siteConfig.title} />
+<link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />
+<meta property="og:url" content={Astro.url} />
     <meta property="og:title" content={pageTitle} />
     <meta
       property="og:description"
@@ -580,6 +581,7 @@ const siteLang = lang.replace("_", "-");
 
     <!-- Font Setup (Astro Font API) -->
     <FontSetup />
+    <link rel="manifest" href="/manifest.webmanifest" />
   </head>
   <body
     class="min-h-screen"
@@ -615,6 +617,16 @@ const siteLang = lang.replace("_", "-");
     <FancyboxManager />
     <ChangelogManager />
     <WalineManager />
+    {import.meta.env.PROD && (
+      <script is:inline>
+        // 回访流量走 Service Worker 本地缓存，绕开国际线路；开发模式不注册以免干扰热更新
+        if ("serviceWorker" in navigator && location.protocol === "https:") {
+          window.addEventListener("load", () => {
+            navigator.serviceWorker.register("/sw.js").catch(() => {});
+          });
+        }
+      </script>
+    )}
   </body>
 </html>
 

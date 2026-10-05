@@ -28,42 +28,43 @@ import { url } from "@/utils/url-utils";
 <MessageBox />
 
 <script is:inline define:vars={{ spineModelConfig, modelPath: url(spineModelConfig.model.path), atlasPath: url(spineModelConfig.model.path.replace(".json", ".atlas")), cssPath: url("/pio/static/spine-player.min.css"), jsPath: url("/pio/static/spine-player.min.js") }}>
-  // 动态加载 Spine CSS（带本地备用）
-  function loadSpineCSS() {
-    if (!spineModelConfig.enable) return;
+    // 优先加载本地 CSS（同源、已被 CSP 允许且配了永久缓存）；CDN 仅作本地文件缺失时的兜底
+    // unpkg 等国外 CDN 在国内时通时断，不能作为首选
+    function loadSpineCSS() {
+      if (!spineModelConfig.enable) return;
 
-    // 检查是否已经加载
-    const existingLink = document.querySelector('link[href*="spine-player"]');
-    if (existingLink) return;
+      // 检查是否已经加载
+      const existingLink = document.querySelector('link[href*="spine-player"]');
+      if (existingLink) return;
 
-    // 首先尝试加载 CDN CSS
-    const cdnLink = document.createElement("link");
-    cdnLink.rel = "stylesheet";
-    cdnLink.href =
-      "https://unpkg.com/@esotericsoftware/spine-player@4.2.*/dist/spine-player.min.css";
-
-    // 监听加载失败事件，自动回退到本地文件
-    cdnLink.onerror = function () {
-      console.warn("⚠️ Spine CSS CDN failed, trying local fallback...");
-
-      // 移除失败的 CDN link
-      if (cdnLink.parentNode) {
-        cdnLink.parentNode.removeChild(cdnLink);
-      }
-
-      // 创建本地备用 CSS link
+      // 首先加载本地 CSS
       const localLink = document.createElement("link");
       localLink.rel = "stylesheet";
       localLink.href = cssPath;
+
+      // 监听加载失败事件，回退到 CDN
       localLink.onerror = function () {
-        console.error("❌ Failed to load Spine CSS");
+        console.warn("⚠️ Spine CSS local failed, trying CDN fallback...");
+
+        // 移除失败的本地 link
+        if (localLink.parentNode) {
+          localLink.parentNode.removeChild(localLink);
+        }
+
+        // 创建 CDN 备用 CSS link
+        const cdnLink = document.createElement("link");
+        cdnLink.rel = "stylesheet";
+        cdnLink.href =
+          "https://unpkg.com/@esotericsoftware/spine-player@4.2.*/dist/spine-player.min.css";
+        cdnLink.onerror = function () {
+          console.error("❌ Failed to load Spine CSS");
+        };
+
+        document.head.appendChild(cdnLink);
       };
 
       document.head.appendChild(localLink);
-    };
-
-    document.head.appendChild(cdnLink);
-  }
+    }
 
   // 消息框功能已移至公共组件 MessageBox.astro
   let isClickProcessing = false; // 防止重复点击的标志
@@ -171,21 +172,22 @@ import { url } from "@/utils/url-utils";
         }
 
         console.log("📦 Loading Spine runtime...");
+        // 优先本地运行时，CDN 仅作兜底（原因同 loadSpineCSS）
         const script = document.createElement("script");
-        script.src =
-          "https://unpkg.com/@esotericsoftware/spine-player@4.2.*/dist/iife/spine-player.min.js";
+        script.src = jsPath;
         script.onload = () => {
-          console.log("✅ Spine runtime loaded from CDN");
+          console.log("✅ Spine runtime loaded from local");
           resolve();
         };
         script.onerror = (_error) => {
-          console.warn("⚠️ CDN failed, trying local fallback...");
+          console.warn("⚠️ Local failed, trying CDN fallback...");
 
-          // 尝试本地回退
+          // 尝试 CDN 回退
           const fallbackScript = document.createElement("script");
-          fallbackScript.src = jsPath;
+          fallbackScript.src =
+            "https://unpkg.com/@esotericsoftware/spine-player@4.2.*/dist/iife/spine-player.min.js";
           fallbackScript.onload = () => {
-            console.log("✅ Spine runtime loaded from local fallback");
+            console.log("✅ Spine runtime loaded from CDN fallback");
             resolve();
           };
           fallbackScript.onerror = () => {

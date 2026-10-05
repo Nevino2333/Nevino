@@ -8,7 +8,9 @@ export const musicPlayerConfig: MusicPlayerConfig = {
 	// 2. 导航栏：在本配置文件把showInNavbar设为false禁用即可
 
 	// 是否在导航栏显示音乐播放器入口
-	showInNavbar: true,
+	// 已关闭：桌面端左栏和移动端底部栏都有常驻播放器，导航栏悬浮面板是第三份重复实例，
+	// 关闭后每页少渲染一整套播放器 DOM/脚本，音乐入口不受影响
+	showInNavbar: false,
 
 	// 使用方式："meting" 使用 Meting API，"local" 使用本地音乐列表
 	mode: "local",

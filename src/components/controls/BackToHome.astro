@@ -16,7 +16,7 @@ import { url } from "@/utils/url-utils";
 
 
 
-<script is:raw is:inline define:vars={{ homeUrl: url("/")}}>
+<script is:inline define:vars={{ homeUrl: url("/") }}>
   window.backToHome = function() {
     const url = homeUrl;
     if (window.swup) {
@@ -25,9 +25,7 @@ import { url } from "@/utils/url-utils";
       window.location.href = url;
     }
   };
-</script>
 
-<script is:inline define:vars={{ homeUrl: url("/") }}>
   function updateBackToHomeVisibility() {
     const btn = document.getElementById("back-to-home-btn");
     if (!btn) return;
@@ -43,7 +41,7 @@ import { url } from "@/utils/url-utils";
 
   // Initial check
   updateBackToHomeVisibility();
-  
+
   // Re-check on view transitions or swup navigation
   document.addEventListener("astro:page-load", updateBackToHomeVisibility);
   document.addEventListener("swup:contentReplaced", updateBackToHomeVisibility);
