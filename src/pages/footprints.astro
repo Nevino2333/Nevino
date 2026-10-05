@@ -1,0 +1,131 @@
+---
+import { Icon } from "astro-icon/components";
+import MainGridLayout from "@layouts/MainGridLayout.astro";
+import { footprintsConfig } from "@/config/footprintsConfig";
+import "leaflet/dist/leaflet.css";
+
+const places = footprintsConfig.places;
+const mapData = JSON.stringify({
+	center: footprintsConfig.center,
+	zoom: footprintsConfig.defaultZoom,
+	places,
+});
+---
+
+<MainGridLayout title="足迹" description="我用脚步丈量过的地方">
+	<div class="card-base py-6 px-6 md:px-8 mb-6 onload-animation">
+		<div class="flex items-center gap-3 mb-4">
+			<div
+				class="transition h-10 w-10 rounded-lg bg-[var(--primary)]/10 text-[var(--primary)] flex items-center justify-center"
+			>
+				<Icon is:inline name="material-symbols:map-rounded" class="text-[1.5rem]" />
+			</div>
+			<div>
+				<h1 class="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
+					足迹
+				</h1>
+				<p class="text-sm text-neutral-500 dark:text-neutral-400">
+					我用脚步丈量过的地方
+				</p>
+			</div>
+		</div>
+
+		{places.length === 0 ? (
+			<div
+				class="flex flex-col items-center justify-center gap-3 py-16 text-neutral-400 dark:text-neutral-500"
+			>
+				<Icon is:inline name="material-symbols:explore-outline" class="text-[3rem]" />
+				<p class="text-sm">足迹地图正在筹备中，敬请期待。</p>
+			</div>
+		) : (
+			<div
+				id="footprints-map"
+				class="footprints-map w-full rounded-xl overflow-hidden border border-black/10 dark:border-white/10"
+				data-map-config={mapData}
+				style="height: 480px"
+				role="application"
+				aria-label="足迹地图"
+			>
+			</div>
+		)}
+
+		{places.length > 0 && (
+			<ul class="footprints-list mt-4 grid gap-2 grid-cols-1 md:grid-cols-2">
+				{places
+					.slice()
+					.sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""))
+					.map((place) => (
+						<li
+							class="flex items-baseline gap-2 rounded-lg bg-black/3 dark:bg-white/5 px-4 py-2.5 text-sm"
+						>
+							<span class="font-bold text-neutral-800 dark:text-neutral-100"
+								>{place.name}</span
+							>
+							{place.date && (
+								<span class="text-xs text-neutral-400">{place.date}</span>
+							)}
+							{place.note && (
+								<span class="text-neutral-500 dark:text-neutral-400 truncate"
+									>{place.note}</span
+								>
+							)}
+						</li>
+					))}
+			</ul>
+		)}
+	</div>
+</MainGridLayout>
+
+<script>
+	import L from "leaflet";
+
+	const initMap = () => {
+		const container = document.getElementById("footprints-map");
+		if (!container || container.dataset.mapInitialized === "true") return;
+		const raw = container.dataset.mapConfig;
+		if (!raw) return;
+		let config: {
+			center: [number, number];
+			zoom: number;
+			places: {
+				name: string;
+				coords: [number, number];
+				date?: string;
+				note?: string;
+			}[];
+		};
+		try {
+			config = JSON.parse(raw);
+		} catch {
+			return;
+		}
+		container.dataset.mapInitialized = "true";
+		const map = L.map(container, {
+			center: config.center,
+			zoom: config.zoom,
+			scrollWheelZoom: false,
+		});
+		L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+			maxZoom: 18,
+			attribution:
+				'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+		}).addTo(map);
+		for (const place of config.places) {
+			// SVG 属性不支持 CSS 变量，标记色用固定值（与主题色 hue 240 一致的蓝色）
+			const marker = L.circleMarker(place.coords, {
+				radius: 7,
+				color: "#4a8fd9",
+				weight: 2,
+				fillColor: "#4a8fd9",
+				fillOpacity: 0.45,
+			}).addTo(map);
+			marker.bindPopup(
+				`<strong>${place.name}</strong>${place.date ? `<br><small>${place.date}</small>` : ""}${place.note ? `<br>${place.note}` : ""}`,
+			);
+		}
+	};
+
+	initMap();
+	// Swup 页面切换后重新初始化
+	document.addEventListener("swup:contentReplaced", () => initMap());
+</script>

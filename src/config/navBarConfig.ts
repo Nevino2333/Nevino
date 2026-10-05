@@ -4,6 +4,7 @@ import {
 	type NavBarSearchConfig,
 	NavBarSearchMethod,
 } from "../types/navBarConfig";
+import { footprintsConfig } from "./footprintsConfig";
 
 // ============================================================================
 // 导航栏配置 - 根据顺序动态生成导航栏链接
@@ -35,6 +36,11 @@ const getDynamicNavBarConfig = (): NavBarConfig => {
 
 	// 更新日志
 	links.push(LinkPresets.Changelog);
+
+	// 足迹地图：有地点数据时才展示入口，避免读者点进空页面
+	if (footprintsConfig.places.length > 0) {
+		links.push(LinkPresets.Footprints);
+	}
 
 	// 友链
 	links.push(LinkPresets.Friends);
@@ -121,6 +127,11 @@ export const LinkPresets: Record<string, NavBarLink> = {
 		name: "工具",
 		url: "/tools/",
 		icon: "material-symbols:construction-rounded",
+	},
+	Footprints: {
+		name: "足迹",
+		url: "/footprints/",
+		icon: "material-symbols:map-rounded",
 	},
 	Changelog: {
 		name: "更新日志",
