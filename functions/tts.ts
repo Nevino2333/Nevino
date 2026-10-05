@@ -26,8 +26,46 @@ const MAX_TEXT_LENGTH = 1000;
 const SYNTHESIS_TIMEOUT_MS = 30000;
 
 interface TtsEnv {
-	// 无需数据库或存储；显式空环境避免误用其他绑定
+	// 配置了 Azure Speech 免费层（F0 每月 50 万字符）后走官方 REST API，稳定合法：
+	// 在 CF Pages 项目环境变量里设置 AZURE_SPEECH_KEY 和 AZURE_SPEECH_REGION（如 eastasia）
+	AZURE_SPEECH_KEY?: string;
+	AZURE_SPEECH_REGION?: string;
 }
+
+// Azure 官方 REST 合成：POST SSML，直接返回音频
+const synthesizeWithAzure = async (
+	text: string,
+	voice: string,
+	env: TtsEnv,
+): Promise<Response> => {
+	const region = env.AZURE_SPEECH_REGION || "eastasia";
+	const response = await fetch(
+		`https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`,
+		{
+			method: "POST",
+			headers: {
+				"Ocp-Apim-Subscription-Key": env.AZURE_SPEECH_KEY ?? "",
+				"Content-Type": "application/ssml+xml",
+				"X-Microsoft-OutputFormat": "audio-24khz-48kbitrate-mono-mp3",
+				"User-Agent": "nevino-blog",
+			},
+			body:
+				`<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='zh-CN'>` +
+				`<voice name='${voice}'>${escapeSsml(text)}</voice></speak>`,
+		},
+	);
+	if (!response.ok) {
+		console.error(`[tts] azure synthesis failed: ${response.status}`);
+		return Response.json({ error: "azure tts failed" }, { status: 502 });
+	}
+	return new Response(response.body, {
+		status: 200,
+		headers: {
+			"Content-Type": "audio/mpeg",
+			"Cache-Control": "public, max-age=86400",
+		},
+	});
+};
 
 // Sec-MS-GEC DRM 令牌：Windows 文件时间向下取整到 5 分钟边界（100ns 刻度）
 // 拼接 TrustedClientToken 后取 SHA-256 大写十六进制，与微软客户端算法一致
@@ -168,6 +206,18 @@ export const onRequestGet = async (
 	}
 	if (!VOICE_WHITELIST.has(voice)) {
 		return Response.json({ error: "voice not allowed" }, { status: 400 });
+	}
+
+	// 优先走 Azure 官方 API（配置了密钥时）；失败再尝试 Edge WebSocket，最后由前端降级
+	if (env.AZURE_SPEECH_KEY) {
+		try {
+			return await synthesizeWithAzure(text, voice, env);
+		} catch (error) {
+			console.error(
+				"[tts] azure path threw:",
+				error instanceof Error ? error.message : error,
+			);
+		}
 	}
 
 	try {
