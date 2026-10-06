@@ -52,19 +52,19 @@ export const siteConfig: SiteConfig = {
 	// Favicon 配置
 	favicon: [
 		{
-			src: "/favicon/chaoc-tingyu-avatar-512.png?v=20260823",
+			src: "/favicon/site-icon-512.png?v=20261006",
 			sizes: "512x512",
 		},
 		{
-			src: "/favicon/chaoc-tingyu-avatar-192.png?v=20260823",
+			src: "/favicon/site-icon-192.png?v=20261006",
 			sizes: "192x192",
 		},
 		{
-			src: "/favicon/chaoc-tingyu-avatar-180.png?v=20260823",
+			src: "/favicon/site-icon-180.png?v=20261006",
 			sizes: "180x180",
 		},
 		{
-			src: "/favicon/chaoc-tingyu-avatar-32.png?v=20260823",
+			src: "/favicon/site-icon-32.png?v=20261006",
 			sizes: "32x32",
 		},
 	],
