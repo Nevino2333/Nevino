@@ -21,6 +21,7 @@ import utc from "dayjs/plugin/utc";
 import CoverImage from "@/components/common/CoverImage.astro";
 import PostTts from "@/components/common/PostTts.astro";
 import PostShare from "@/components/common/PostShare.astro";
+import PostReaderEnhancer from "@/components/common/PostReaderEnhancer.astro";
 import PostMetadata from "@/components/layout/PostMeta.astro";
 import RecommendedPost from "@/components/misc/RecommendedPost.astro";
 import SharePoster from "@/components/misc/SharePoster.svelte";
@@ -534,6 +535,7 @@ const relatedPosts = await getRelatedPosts(entry, 5);
     <a
       href={entry.data.nextSlug ? getPostUrlBySlug(entry.data.nextSlug) : url("/")}
       class="w-full font-bold overflow-hidden active:scale-95"
+      data-post-nav="next"
     >
       <div class="btn-card rounded-2xl w-full h-15 max-w-full px-4 flex items-center justify-start! gap-4">
         <Icon is:inline
@@ -549,6 +551,7 @@ const relatedPosts = await getRelatedPosts(entry, 5);
     <a
       href={entry.data.prevSlug ? getPostUrlBySlug(entry.data.prevSlug) : url("/")}
       class="w-full font-bold overflow-hidden active:scale-95"
+      data-post-nav="prev"
     >
       <div class="btn-card rounded-2xl w-full h-15 max-w-full px-4 flex items-center justify-end! gap-4">
         <div class="overflow-hidden transition text-ellipsis whitespace-nowrap max-w-[calc(100%-3rem)] text-black/75 dark:text-white/75">
@@ -563,6 +566,7 @@ const relatedPosts = await getRelatedPosts(entry, 5);
   </div>
 
   <RecommendedPost relatedPosts={relatedPosts} currentPostId={entry.id} />
+  <PostReaderEnhancer />
 
   <!-- 评论 -->
   {entry.data.comment && !entry.data.password && <Comment post={entry} />}

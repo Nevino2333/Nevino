@@ -103,6 +103,35 @@ const editorSnapshot = $derived(
 );
 const isDirty = $derived(editorSnapshot !== savedSnapshot);
 
+// 发布检查：保存前的 SEO 与内容完整度速览，纯前端静态规则
+const publishChecks = $derived.by(() => {
+	const checks: { level: "ok" | "warn" | "tip"; text: string }[] = [];
+	const descLen = description.trim().length;
+	if (!descLen)
+		checks.push({ level: "warn", text: "缺少描述：文章列表与分享卡片将没有摘要" });
+	else if (descLen < 40)
+		checks.push({
+			level: "tip",
+			text: `描述仅 ${descLen} 字，建议写到 80 字上下，搜索结果展示更完整`,
+		});
+	else if (descLen > 160)
+		checks.push({
+			level: "tip",
+			text: `描述 ${descLen} 字偏长，分享卡片可能被截断，建议控制在 160 字内`,
+		});
+	if (!tags.trim())
+		checks.push({ level: "warn", text: "还没有标签：标签页与站内检索依赖它" });
+	if (!category.trim()) checks.push({ level: "tip", text: "未设置分类" });
+	if (!image.trim())
+		checks.push({ level: "tip", text: "未设置封面：列表将回退到默认样式" });
+	const chars = content.trim().length;
+	const minutes = Math.max(1, Math.round(chars / 400));
+	if (chars < 300)
+		checks.push({ level: "warn", text: `正文仅 ${chars} 字符，内容偏短` });
+	checks.push({ level: "ok", text: `正文 ${chars} 字符 · 预计阅读约 ${minutes} 分钟` });
+	return checks;
+});
+
 // 预览经 sanitize-html 白名单过滤，脚本/事件属性/iframe 一律剔除
 const PREVIEW_SANITIZE_OPTIONS = {
 	allowedTags: [
@@ -544,6 +573,8 @@ $effect(() => {
 		{#if publishTask}<div class="admin-publish-status admin-publish-{publishTask.status}" role="status"><strong>发布状态：{publishTask.status}</strong><span>{publishTask.targetPath || "正在确定发布路径"}</span>{#if canRecoverDeploymentWait(publishTask.status)}<button class="admin-button admin-button-danger" disabled={recovering} onclick={recoverDeploymentWait}>{recovering ? "解除中…" : "解除等待"}</button>{/if}{#if canReconcilePublishTask(publishTask.status)}<button class="admin-button" disabled={reconciling} onclick={reconcilePublishTask}>{reconciling ? "对账中…" : "重新对账"}</button>{/if}</div>{/if}
 		<div class="admin-section-heading"><div><p class="admin-kicker">METADATA</p><h3>文章信息</h3></div><span class="admin-hint">标题为必填项</span></div>
 		<div class="admin-fields"><label class="admin-field-wide">标题<input bind:value={title} placeholder="文章标题" required /></label><label>Slug<input bind:value={slug} disabled={draft?.publicationState === "published"} placeholder="可选，例如 my-first-post" />{#if draft?.publicationState === "published"}<small>线上文章请使用下方重命名操作。</small>{/if}</label><label>语言<input bind:value={lang} placeholder="zh-CN" /></label><label>发布日期<input type="date" bind:value={published} required /></label><label>更新日期<input type="date" bind:value={updated} /></label><label class="admin-field-wide">描述<textarea bind:value={description} rows="3" placeholder="用于列表和分享卡片的文章摘要"></textarea></label><label class="admin-field-wide">AI 摘要<textarea bind:value={aiSummary} rows="3" placeholder="文章的 AI 摘要，可留空"></textarea></label><label class="admin-field-wide">封面图<div class="admin-cover-field"><input bind:value={image} placeholder="/media/cover.webp 或 https://…" /><button type="button" onclick={onmedia}>从媒体库选择</button></div></label><label>标签<input bind:value={tags} placeholder="多个标签用逗号分隔" /></label><label>分类<input bind:value={category} placeholder="文章分类" /></label><label>作者<input bind:value={author} placeholder="文章作者，可留空" /></label><label>来源链接<input type="url" bind:value={sourceLink} placeholder="https://…" /></label><label>许可名称<input bind:value={licenseName} placeholder="例如 CC BY-NC-SA 4.0" /></label><label>许可链接<input type="url" bind:value={licenseUrl} placeholder="https://…" /></label><div class="admin-field-wide admin-switches"><label class="admin-checkbox"><input type="checkbox" bind:checked={pinned} /><span>置顶文章<small>在文章列表中优先展示</small></span></label><label class="admin-checkbox"><input type="checkbox" bind:checked={comment} /><span>开启评论<small>允许读者在文章下留言</small></span></label></div></div>
+		<div class="admin-section-heading"><div><p class="admin-kicker">CHECKS</p><h3>发布检查</h3></div><span class="admin-hint">实时更新 · 保存前过一遍</span></div>
+		<ul class="admin-publish-checks">{#each publishChecks as check (check.text)}<li class={check.level}><i></i><span>{check.text}</span></li>{/each}</ul>
 		<div class="admin-section-heading admin-writing-heading"><div><p class="admin-kicker">COMPOSE</p><h3>正文内容</h3></div><span class="admin-hint">Markdown · {content.length} 字符</span></div>
 		<div class="admin-editor-tabs" role="tablist" aria-label="正文编辑模式"><button class:active={editorMode === "write"} class="admin-tab" role="tab" aria-selected={editorMode === "write"} onclick={() => editorMode = "write"}>编辑</button><button class:active={editorMode === "preview"} class="admin-tab" role="tab" aria-selected={editorMode === "preview"} onclick={() => editorMode = "preview"}>预览</button><button class="admin-media-shortcut" onclick={onmedia}>插入图片</button></div>
 		{#if editorMode === "write"}<label class="admin-content-label"><span class="sr-only">Markdown 原文</span><textarea class="admin-textarea" bind:value={content} placeholder="# 从这里开始写作…" spellcheck="false"></textarea></label><p class="admin-shortcut-hint">Ctrl+S 保存 · 更改会自动留存本地快照，浏览器意外关闭后可恢复。</p>{:else}<article class="admin-preview admin-markdown-preview" aria-label="安全预览">{#if previewAvailable}{@html previewHtml}{:else}<p>预览会显示在这里。</p>{/if}</article>{/if}
