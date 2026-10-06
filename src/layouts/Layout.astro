@@ -17,6 +17,7 @@ import ConfigCarrier from "@components/layout/ConfigCarrier.astro";
 import {
 	analyticsConfig,
 	backgroundWallpaper,
+	commentConfig,
 	expressiveCodeConfig,
 	profileConfig,
 	siteConfig,
@@ -29,7 +30,7 @@ import {
 } from "@/constants/constants";
 import { defaultFavicons } from "@/constants/icon";
 import type { Favicon } from "@/types/config";
-import { getBackgroundImages, isHomePage } from "@/utils/layout-utils";
+import { isHomePage } from "@/utils/layout-utils";
 import { url } from "@/utils/url-utils";
 
 import "@/styles/main.css";
@@ -70,9 +71,6 @@ const shouldShowTopHighlight =
 	navbarTransparentMode === "full" || navbarTransparentMode === "semifull";
 
 const enableBanner = backgroundWallpaper.mode === "banner";
-const backgroundImages = getBackgroundImages();
-const wallpaperPreloadImage =
-	backgroundImages.desktop[0] || backgroundImages.mobile[0] || "";
 
 let pageTitle: string;
 if (title) {
@@ -182,11 +180,6 @@ const siteLang = lang.replace("_", "-");
 
     <meta name="viewport" content="width=device-width" />
     <meta name="generator" content={Astro.generator} />
-    {
-      wallpaperPreloadImage && backgroundWallpaper.mode !== "none" && (
-        <link rel="preload" as="image" href={wallpaperPreloadImage} fetchpriority="low" />
-      )
-    }
     {
       favicons.map((favicon) => (
         <link
@@ -616,7 +609,10 @@ const siteLang = lang.replace("_", "-");
     <!-- Fancybox Manager -->
     <FancyboxManager />
     <ChangelogManager />
-    <WalineManager />
+    <!-- Waline 客户端仅在真正启用 Waline 评论时加载。
+         它打包后约 172KB（brotli 后仍近 59KB），而本站评论已切到 giscus，
+         无条件加载等于每个页面都白下一份用不到的 JS。 -->
+    {commentConfig.type === "waline" && <WalineManager />}
     {import.meta.env.PROD && (
       <script is:inline>
         // 回访流量走 Service Worker 本地缓存，绕开国际线路；开发模式不注册以免干扰热更新

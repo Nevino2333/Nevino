@@ -1,4 +1,6 @@
 ---
+// Waline 样式只在真正渲染 Waline 评论区时引入，避免其它评论方案下白白加载 ~22KB CSS
+import "@waline/client/style";
 import {
 	analyticsConfig,
 	commentConfig,

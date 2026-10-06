@@ -1,5 +1,7 @@
 ---
-import "@waline/client/style";
+// 注意：这里不要引入 "@waline/client/style"。
+// 本组件在 Layout 中被静态 import，模块级副作用会让 Waline 的 ~22KB 样式无条件打进
+// 每个页面的 head。样式已改由真正渲染评论区的 comment/Waline.astro 负责引入。
 ---
 
 <script>
