@@ -9,11 +9,12 @@
  * - 大文件（壁纸、音乐、看板娘）：cache-first，但放进独立缓存并按最近使用淘汰
  *   —— 壁纸池有数十张且会随轮播不断换新的，若不设上限会撑爆移动端 Cache Storage
  *     （配额通常 50~100MB，写满后浏览器会整体清空，反而丢掉已有的缓存）
- * - 动态路由（/api/、/media/）与 sw.js 自身完全直通，不拦截
+ * - 动态路由（/api/、/media/、/tts）与 sw.js 自身完全直通，不拦截
  *
  * 上线新部署后：HTML 拉到新版本并引用新的哈希资源，旧版本缓存在 activate 时清理。
+ * VERSION 升号（v1→v2）会清掉所有旧缓存，强制客户端丢弃可能过期已久的页面快照。
  */
-const VERSION = "v1";
+const VERSION = "v2";
 const PAGE_CACHE = `firefly-pages-${VERSION}`;
 const STATIC_CACHE = `firefly-static-${VERSION}`;
 const HEAVY_CACHE = `firefly-heavy-${VERSION}`;
@@ -25,7 +26,7 @@ const NAVIGATION_TIMEOUT = 3000;
 
 const CACHE_FIRST_PREFIXES = ["/_astro/", "/pagefind/", "/assets/", "/js/", "/fonts/", "/favicon/"];
 const HEAVY_PREFIXES = ["/assets/images/wallpaper/", "/assets/music/", "/pio/"];
-const BYPASS_PREFIXES = ["/api/", "/media/", "/sw.js"];
+const BYPASS_PREFIXES = ["/api/", "/media/", "/tts", "/sw.js"];
 
 self.addEventListener("install", () => {
 	self.skipWaiting();

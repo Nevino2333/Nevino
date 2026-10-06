@@ -123,12 +123,17 @@ import { Icon } from "astro-icon/components";
 					URL.revokeObjectURL(url);
 					resolve();
 				};
-				audio.play().catch(() => resolve());
+				audio.play().catch(() => {
+					// 播放被浏览器策略拦截（如瞬时用户激活过期）时明确提示，避免看起来"点了没反应"
+					stop();
+					setUi("idle", "播放被浏览器拦截，请再点一次");
+				});
 			});
 
 		const speakBrowserFrom = (from: number) => {
 			if (!synth) {
 				stop();
+				setUi("idle", "当前浏览器不支持语音合成");
 				return;
 			}
 			const speakAt = (i: number) => {

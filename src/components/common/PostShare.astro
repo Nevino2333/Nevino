@@ -26,6 +26,16 @@ import { Icon } from "astro-icon/components";
 		}
 		shareWindow.__postShareInitialized = true;
 
+		const showToast = (text: string) => {
+			const el = document.createElement("div");
+			el.textContent = text;
+			el.style.cssText =
+				"position:fixed;left:50%;bottom:6rem;transform:translateX(-50%);z-index:9999;padding:0.6rem 1rem;border-radius:0.75rem;background:rgb(0 0 0 / 0.78);color:#fff;font-size:0.85rem;line-height:1.5;box-shadow:0 8px 24px rgb(0 0 0 / 0.25);transition:opacity 0.4s ease;pointer-events:none;";
+			document.body.appendChild(el);
+			setTimeout(() => (el.style.opacity = "0"), 1600);
+			setTimeout(() => el.remove(), 2200);
+		};
+
 		const bind = () => {
 			const btn = document.getElementById("post-share-btn");
 			if (!btn || btn.dataset.shareBound === "1") return;
@@ -45,12 +55,9 @@ import { Icon } from "astro-icon/components";
 				}
 				try {
 					await navigator.clipboard.writeText(location.href);
-					btn.title = "链接已复制";
-					setTimeout(() => {
-						btn.title = "分享本文";
-					}, 1600);
+					showToast("链接已复制，去粘贴分享吧");
 				} catch {
-					/* 剪贴板不可用（非安全上下文） */
+					showToast("复制失败，请手动复制地址栏链接");
 				}
 			});
 		};
