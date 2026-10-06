@@ -12,7 +12,63 @@ export type Tool = {
 };
 
 // 本人项目清单
-export const myTools: Tool[] = [];
+export const myTools: Tool[] = [
+	{
+		name: "CampusBili",
+		description:
+			"校园哔哩哔哩——内网 Bilibili 代理服务，让校内设备也能刷上 B 站。",
+		icon: "simple-icons:bilibili",
+		platforms: ["Web"],
+		url: "https://github.com/Nevino2333/CampusBili",
+		isFree: true,
+		accent: "#fb7299",
+		isMine: true,
+	},
+	{
+		name: "noVNC 魔改版",
+		description:
+			"适配超脑热点环境的浏览器远控方案，双内核兼容，支持一键部署。",
+		icon: "material-symbols:desktop-windows-rounded",
+		platforms: ["Web", "Linux"],
+		url: "https://github.com/Nevino2333/noVNC",
+		isFree: true,
+		accent: "#10b981",
+		isMine: true,
+	},
+	{
+		name: "sponsor_pass",
+		description:
+			"QQ 机器人插件：非白名单好友先自由聊 N 轮，可等管理员同意，或通过爱发电赞助自动通过。",
+		icon: "material-symbols:forum-rounded",
+		platforms: ["Windows", "Linux"],
+		url: "https://github.com/Nevino2333/astrbot_plugin_sponsor_pass",
+		isFree: true,
+		accent: "#8b5cf6",
+		isMine: true,
+	},
+	{
+		name: "iFlytek-C8hPro-Crack",
+		description:
+			"讯飞 C8hPro 学习机平板的刷机研究，抛砖引玉，欢迎来 issues 一起讨论。",
+		icon: "material-symbols:tablet-android-rounded",
+		platforms: ["Android"],
+		url: "https://github.com/Nevino2333/iFlytek-C8hPro-Crack",
+		isFree: true,
+		accent: "#f97316",
+		isMine: true,
+	},
+	{
+		name: "Nevino 博客",
+		description:
+			"本站：Astro 7 + Svelte 5 深度定制，带在线后台、Edge TTS 朗读与 PWA 离线缓存。",
+		icon: "simple-icons:astro",
+		platforms: ["Web"],
+		url: "https://github.com/Nevino2333/Nevino",
+		isFree: true,
+		accent: "#3b82f6",
+		isMine: true,
+	},
+];
 
 // 第三方工具清单
 export const thirdPartyTools: Tool[] = [

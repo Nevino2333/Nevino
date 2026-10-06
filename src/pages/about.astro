@@ -19,30 +19,28 @@ const friendCount = getEnabledFriends().length;
 
 const changelogEntries = [
 	{
-		title: "博客视觉与友链体验",
-		description:
-			"把友链、开屏动画和评论区的视觉连接重新梳理成一套更完整的体验。",
+		title: "朗读、离线与速度",
+		description: "文章能听了，断网也能翻，页面整体轻了一大圈。",
 		href: "/changelog/",
-		tags: ["Nevino V1.0.0", "UI"],
+		tags: ["功能", "性能"],
 		tone: "blue",
-		icon: "material-symbols:auto-awesome-rounded",
+		icon: "material-symbols:volume-up-rounded",
 	},
 	{
-		title: "站点版本整理",
-		description:
-			"统一关于我、导航和站点信息中的博客版本展示，让每个入口都说同一种语言。",
+		title: "追番页与随机阅读",
+		description: "B 站追番数据每天自动同步，还能随手翻一篇旧文章。",
 		href: "/changelog/",
-		tags: ["Nevino V1.0.0", "维护"],
+		tags: ["功能", "内容"],
 		tone: "mint",
-		icon: "material-symbols:history-rounded",
+		icon: "material-symbols:live-tv-rounded",
 	},
 	{
-		title: "正在持续记录",
-		description: "项目复盘、踩坑经验与日常思考，会继续在这里慢慢留下。",
+		title: "更像自己的博客",
+		description: "标语、项目展示与个人名片，模板的痕迹一个个抹掉。",
 		href: "/changelog/",
-		tags: ["Nevino V1.0.0", "持续更新"],
+		tags: ["个人化"],
 		tone: "violet",
-		icon: "material-symbols:edit-note-rounded",
+		icon: "material-symbols:auto-awesome-rounded",
 	},
 ];
 
@@ -52,23 +50,65 @@ const personalProjects: {
 	tags: string[];
 	tone: string;
 	icon: string;
-}[] = [];
+}[] = [
+	{
+		title: "CampusBili",
+		description:
+			"校园内网里的 Bilibili 代理服务——在限制访问的环境里，给同学们修一条通往 B 站的路。",
+		tags: ["Node.js", "Express", "Vue"],
+		tone: "gold",
+		icon: "material-symbols:live-tv-rounded",
+	},
+	{
+		title: "noVNC 魔改版",
+		description: "适配超脑热点环境的浏览器远控方案，双内核兼容与一键部署。",
+		tags: ["noVNC", "JavaScript", "远控"],
+		tone: "violet",
+		icon: "material-symbols:desktop-windows-rounded",
+	},
+	{
+		title: "iFlytek-C8hPro-Crack",
+		description: "讯飞学习机平板的刷机研究，把「学习专用机」刷成自己的形状。",
+		tags: ["Android", "刷机", "研究"],
+		tone: "mint",
+		icon: "material-symbols:tablet-android-rounded",
+	},
+	{
+		title: "astrbot_plugin_sponsor_pass",
+		description: "QQ 机器人插件：陌生人先自由聊 N 轮，赞助可自动通过好友申请。",
+		tags: ["Python", "AstrBot", "QQ 机器人"],
+		tone: "mint",
+		icon: "material-symbols:smart-toy-rounded",
+	},
+	{
+		title: "Nevino 博客",
+		description: "本站。Astro 7 + Svelte 5 深度定制，带在线后台、Edge TTS 朗读与 PWA。",
+		tags: ["Astro", "Svelte", "Cloudflare"],
+		tone: "gold",
+		icon: "material-symbols:code-blocks-rounded",
+	},
+];
 
 const recentActivity = [
 	{
-		kind: "系统",
-		title: "博客搭建完成，从零开始记录",
+		kind: "项目",
+		title: "博客接入 Edge TTS 朗读与 PWA 离线缓存",
 		href: "/changelog/",
+	},
+	{
+		kind: "文章",
+		title: "复盘 MDM 网段封锁的绕过思路",
+		href: "/posts/captive-mdm/",
+	},
+	{
+		kind: "文章",
+		title: "NoVNC 提权与超脑热点远控实践",
+		href: "/posts/novnc-privilege-escalation/",
 	},
 	{
 		kind: "学习",
 		title: "正在学习 Python / C++ / C#",
 		href: "/archive/",
-	},
-	{
-		kind: "系统",
-		title: "交个朋友，欢迎留言交流",
-		href: "/guestbook/",
 	},
 ];
 
@@ -208,7 +248,7 @@ const serverStats = [
 						<span class="profile-panel__meta">公开 · 持续更新</span>
 					</header>
 					<div class="profile-readme__body">
-						<p class="profile-readme__quote">“物物而不物于物，念念而不念于念。”</p>
+						<p class="profile-readme__quote">“规则是别人写的，配置文件是我的。”</p>
 						<Markdown class="profile-markdown">
 							<Content />
 						</Markdown>

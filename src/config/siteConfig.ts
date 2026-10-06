@@ -9,7 +9,7 @@ export const siteConfig: SiteConfig = {
 	title: "Nevino",
 
 	// 站点副标题
-	subtitle: "物物而不物于物，念念而不念于念",
+	subtitle: "规则是别人的，配置是我的",
 
 	// 主题版本
 	themeVersion: "V1.0.0",
@@ -21,10 +21,10 @@ export const siteConfig: SiteConfig = {
 
 	// 站点描述
 	description:
-		"Nevino 的个人博客，基于 Astro 深度定制的个人博客主题，记录我的开发历程和日常思考。",
+		"17 岁高中生的折腾记录：绕 MDM、内网代理、学习机刷机、QQ 机器人，用 vibe coding 把想法快速落地。这里记下每一次踩坑与修复。",
 
 	// 站点关键词
-	keywords: ["Nevino", "Astro", "ACGN", "博客", "技术博客", "静态博客"],
+	keywords: ["Nevino", "博客", "技术博客", "vibe coding", "高中生开发者", "MDM", "内网代理", "刷机", "Astro"],
 
 	// 主题色
 	themeColor: {
