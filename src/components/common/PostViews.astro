@@ -1,0 +1,72 @@
+---
+import { Icon } from "astro-icon/components";
+
+// 文章浏览量徽标：计数来自 /api/stats/visit（beacon 已在文章页累加）。
+// 数据库不可用或取数失败时整个徽标隐藏，不影响阅读。
+---
+
+<span
+	id="post-views-badge"
+	class="transition h-6 rounded-md bg-black/5 dark:bg-white/10 text-black/50 dark:text-white/50 flex items-center justify-center gap-1 px-2"
+	title="浏览量"
+	hidden
+>
+	<Icon is:inline name="material-symbols:visibility-outline-rounded" class="text-[1.05rem]" />
+	<span class="views-count text-xs font-bold">…</span>
+</span>
+
+<script>
+	(() => {
+		const viewsWindow = window as Window & {
+			__postViewsInit?: boolean;
+			__postViewsBind?: () => void;
+		};
+		if (viewsWindow.__postViewsInit) {
+			viewsWindow.__postViewsBind?.();
+			return;
+		}
+		viewsWindow.__postViewsInit = true;
+
+		const localSlug = (): string => {
+			// /posts/{slug}/ → {slug}
+			const match = location.pathname.match(/^\/posts\/([a-z0-9][a-z0-9-]{0,79})\/?$/);
+			return match ? (match[1] as string) : "";
+		};
+
+		const render = (badge: HTMLElement, views: number) => {
+			const countEl = badge.querySelector(".views-count");
+			if (countEl) countEl.textContent = String(views);
+			badge.hidden = false;
+		};
+
+		const bind = () => {
+			const badge = document.getElementById(
+				"post-views-badge",
+			) as HTMLElement | null;
+			if (!badge || badge.dataset.viewsBound === "1") return;
+			badge.dataset.viewsBound = "1";
+			const slug = localSlug();
+			if (!slug) {
+				badge.hidden = true;
+				return;
+			}
+			// 浏览量本身由 beacon 的 POST 累加，这里只读展示
+			fetch(`/api/stats/visit?slug=${encodeURIComponent(slug)}`)
+				.then((r) => r.json())
+				.then((body) => {
+					const data = body.data || {};
+					if (!data.available || typeof data.views !== "number") {
+						badge.hidden = true;
+						return;
+					}
+					render(badge, data.views);
+				})
+				.catch(() => {
+					badge.hidden = true;
+				});
+		};
+
+		viewsWindow.__postViewsBind = bind;
+		bind();
+	})();
+</script>

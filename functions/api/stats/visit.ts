@@ -6,6 +6,8 @@ interface VisitEnv {
 }
 
 const UUID_PATTERN = /^[A-Za-z0-9_-]{8,64}$/;
+// 与前端 localSlug 的解析保持一致：/posts/{slug}/
+const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{0,99}$/;
 
 const statsResponse = (
 	data: Record<string, number>,
@@ -40,7 +42,10 @@ const localDay = (): string => {
 	return new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10);
 };
 
-const readStats = async (db: D1Database): Promise<Record<string, number>> => {
+const readStats = async (
+	db: D1Database,
+	slug = "",
+): Promise<Record<string, number>> => {
 	const day = localDay();
 	const today = await db.prepare("SELECT pv, uv FROM visit_days WHERE day = ?")
 		.bind(day)
@@ -51,13 +56,22 @@ const readStats = async (db: D1Database): Promise<Record<string, number>> => {
 	const visitors = await db
 		.prepare("SELECT COUNT(*) AS visitors FROM visit_visitors")
 		.first<{ visitors: number }>();
-	return {
+	const data: Record<string, number> = {
 		available: 1,
 		todayVisitors: today?.uv ?? 0,
 		todayPageviews: today?.pv ?? 0,
 		visitors: visitors?.visitors ?? 0,
 		pageviews: totals?.pageviews ?? 0,
 	};
+	if (slug) {
+		const post = await db
+			.prepare("SELECT views FROM post_views WHERE slug = ?")
+			.bind(slug)
+			.first<{ views: number }>();
+		data.slug = 1;
+		data.views = post?.views ?? 0;
+	}
+	return data;
 };
 
 export const onRequestPost: PagesFunction<VisitEnv> = async (context) => {
@@ -66,13 +80,19 @@ export const onRequestPost: PagesFunction<VisitEnv> = async (context) => {
 		return new Response(null, { status: 403 });
 	}
 	let visitor = "";
+	let slug = "";
 	try {
-		const body = (await context.request.json()) as { visitor?: unknown };
+		const body = (await context.request.json()) as {
+			visitor?: unknown;
+			slug?: unknown;
+		};
 		visitor = typeof body.visitor === "string" ? body.visitor : "";
+		slug = typeof body.slug === "string" ? body.slug : "";
 	} catch {
 		visitor = "";
 	}
 	if (!UUID_PATTERN.test(visitor)) return statsResponse({ available: 0 });
+	if (slug && !SLUG_PATTERN.test(slug)) slug = "";
 
 	const day = localDay();
 	const db = context.env.DB;
@@ -102,7 +122,16 @@ export const onRequestPost: PagesFunction<VisitEnv> = async (context) => {
 			)
 			.bind(visitor, new Date().toISOString())
 			.run();
-		return statsResponse(await readStats(db));
+		// 文章页浏览量：仅当 beacon 携带合法 slug
+		if (slug) {
+			await db
+				.prepare(
+					"INSERT INTO post_views (slug, views) VALUES (?, 1) ON CONFLICT(slug) DO UPDATE SET views = views + 1",
+				)
+				.bind(slug)
+				.run();
+		}
+		return statsResponse(await readStats(db, slug));
 	} catch {
 		return statsResponse({ available: 0 });
 	}
@@ -110,8 +139,16 @@ export const onRequestPost: PagesFunction<VisitEnv> = async (context) => {
 
 export const onRequestGet: PagesFunction<VisitEnv> = async (context) => {
 	if (!context.env.DB) return statsResponse({ available: 0 });
+	// ?slug= 查询单篇文章浏览量（PostViews 组件取数用）
+	let slug = "";
 	try {
-		return statsResponse(await readStats(context.env.DB));
+		slug = new URL(context.request.url).searchParams.get("slug") ?? "";
+	} catch {
+		slug = "";
+	}
+	if (slug && !SLUG_PATTERN.test(slug)) slug = "";
+	try {
+		return statsResponse(await readStats(context.env.DB, slug));
 	} catch {
 		return statsResponse({ available: 0 });
 	}

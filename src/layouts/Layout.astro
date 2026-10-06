@@ -668,10 +668,12 @@ const siteLang = lang.replace("_", "-");
             const visitor = getVisitorId();
             if (!visitor) return;
             sessionStorage.setItem(key, "1");
+            // 文章页附带 slug，服务端同步累加该文章的浏览量
+            const postMatch = location.pathname.match(/^\/posts\/([a-z0-9][a-z0-9-]{0,99})\/?$/);
             fetch("/api/stats/visit", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ visitor }),
+              body: JSON.stringify({ visitor, slug: postMatch ? postMatch[1] : undefined }),
               keepalive: true,
             }).catch(() => {});
           } catch {}
