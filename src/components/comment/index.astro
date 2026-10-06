@@ -3,12 +3,16 @@ import type { CollectionEntry } from "astro:content";
 import { commentConfig } from "@/config/commentConfig";
 import Key from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
-import { removeFileExtension } from "@/utils/url-utils";
-import Artalk from "./Artalk.astro";
-import Disqus from "./Disqus.astro";
 import Giscus from "./Giscus.astro";
-import Twikoo from "./Twikoo.astro";
-import Waline from "./Waline.astro";
+
+// ⚠️ 只导入当前启用的评论系统：静态导入会把每套系统的 CSS 全部打进
+// 所有文章页（仅 Waline 一家就是 48KB）。切换评论系统时：
+// 1. 改 commentConfig.ts 的 type
+// 2. 把上面 import 换成对应组件，并同步下方渲染分支
+//    可选: import Twikoo from "./Twikoo.astro";  (path)
+//          import Waline from "./Waline.astro";  (path)
+//          import Disqus from "./Disqus.astro";  (identifier/url/title)
+//          import Artalk from "./Artalk.astro";  (path)
 
 interface Props {
 	post?: CollectionEntry<"posts"> | CollectionEntry<"spec">;
@@ -16,20 +20,13 @@ interface Props {
 	title?: string;
 }
 
-const { post, customPath, title: customTitle } = Astro.props as Props;
 
-// 根据页面类型确定路径
-const slugFromPath = (customPath || "/").replace(/^\/+|\/+$/g, "") || "index";
-const slug = post ? removeFileExtension(post.id) : slugFromPath;
-const path = customPath
-	? customPath
-	: post
-		? post.collection === "posts"
-			? `/posts/${slug}`
-			: `/${slug}`
-		: `/${slug}`;
-const url = `${Astro.site?.href}${path}`;
-const postTitle = post && "title" in post.data ? post.data.title : undefined;
+// 当前启用 giscus（无需路径/标题）；切换其他系统时按上方说明恢复路径计算：
+// const slugFromPath = (customPath || "/").replace(/^\/+|\/+$/g, "") || "index";
+// const slug = post ? removeFileExtension(post.id) : slugFromPath;
+// const path = customPath ? customPath : post ? (post.collection === "posts" ? `/posts/${slug}` : `/${slug}`) : `/${slug}`;
+// const url = `${Astro.site?.href}${path}`;
+// const postTitle = post && "title" in post.data ? post.data.title : undefined;
 
 // 强制commentService类型为string，避免类型不兼容警告
 let commentService: string = commentConfig?.type || "none";
@@ -56,11 +53,7 @@ let commentService: string = commentConfig?.type || "none";
       </div>
       <!-- 评论内容区域 -->
       <div class="relative z-10 pl-2 pr-2">
-        {commentService === "twikoo" && <Twikoo path={path} />}
-        {commentService === "waline" && <Waline path={path} />}
         {commentService === "giscus" && <Giscus />}
-        {commentService === "disqus" && <Disqus identifier={slug} url={url} title={customTitle || postTitle || slug} />}
-          {commentService === "artalk" && <Artalk path={path} />}
         {commentService === "none" && (
           <div class="text-center py-8 text-(--content-meta)">
             <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-(--btn-regular-bg) flex items-center justify-center">

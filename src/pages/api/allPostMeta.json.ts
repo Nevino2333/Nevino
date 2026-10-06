@@ -18,9 +18,11 @@ const getPostCover = async (
 	);
 	if (!isLocalImage) return processedImage;
 
-	const files = import.meta.glob<ImageMetadata>("../../**", {
-		import: "default",
-	});
+	// 限定图片扩展名：无限制的 "../../**" 会把全站模块拖进本入口的构建图
+	const files = import.meta.glob<ImageMetadata>(
+		"../../**/*.{png,jpg,jpeg,webp,avif,gif,svg}",
+		{ import: "default" },
+	);
 	const basePath = getFileDirFromPath(filePath || "");
 	const normalizedPath = path
 		.normalize(path.join("../../", basePath, processedImage))

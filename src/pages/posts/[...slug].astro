@@ -78,9 +78,12 @@ if (processedImage) {
 	);
 	if (isLocal) {
 		const basePath = getFileDirFromPath(entry.filePath || "");
-		const files = import.meta.glob<ImageMetadata>("../../**", {
-			import: "default",
-		});
+		// 必须限定图片扩展名：无限制的 "../../**" 会把全站所有页面模块
+		// （及其 CSS）拖进文章页的构建图，导致每页样式互相泄漏
+		const files = import.meta.glob<ImageMetadata>(
+			"../../**/*.{png,jpg,jpeg,webp,avif,gif,svg}",
+			{ import: "default" },
+		);
 		let normalizedPath = path
 			.normalize(path.join("../../", basePath, processedImage))
 			.replace(/\\/g, "/");
@@ -101,10 +104,12 @@ if (posterAvatarUrl) {
 		posterAvatarUrl.startsWith("https") ||
 		posterAvatarUrl.startsWith("data:")
 	);
-	if (isLocalAvatar) {
-		const files = import.meta.glob<ImageMetadata>("../../**", {
-			import: "default",
-		});
+		if (isLocalAvatar) {
+			// 同上：限定图片扩展名，避免把全站模块拖进构建图
+			const files = import.meta.glob<ImageMetadata>(
+				"../../**/*.{png,jpg,jpeg,webp,avif,gif,svg}",
+				{ import: "default" },
+			);
 		const normalizedPath = path
 			.normalize(path.join("../../", posterAvatarUrl))
 			.replace(/\\/g, "/");

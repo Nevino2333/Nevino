@@ -36,7 +36,6 @@ import { Icon } from "astro-icon/components";
 		let mode: "edge" | "browser" = "edge";
 		let edgeFailed = false;
 		let chunks: string[] = [];
-		let index = 0;
 		let state: TtsState = "idle";
 		let btn: HTMLButtonElement | null = null;
 		let currentAudio: HTMLAudioElement | null = null;
@@ -96,7 +95,6 @@ import { Icon } from "astro-icon/components";
 			}
 			if (synth) synth.cancel();
 			chunks = [];
-			index = 0;
 			setUi("idle", "朗读本文");
 		};
 
@@ -139,7 +137,6 @@ import { Icon } from "astro-icon/components";
 					stop();
 					return;
 				}
-				index = i;
 				const utterance = new SpeechSynthesisUtterance(chunks[i]);
 				utterance.lang = "zh-CN";
 				const voice = synth
@@ -159,7 +156,6 @@ import { Icon } from "astro-icon/components";
 			let prefetch: Promise<string> | null = null;
 			for (let i = from; i < chunks.length; i++) {
 				if (state !== "speaking") return;
-				index = i;
 				let url: string;
 				try {
 					url = await (prefetch ?? fetchEdgeAudio(chunks[i]));
@@ -189,7 +185,6 @@ import { Icon } from "astro-icon/components";
 			if (!text) return;
 			const useEdge = mode === "edge" && !edgeFailed;
 			chunks = chunkText(text, useEdge ? EDGE_CHUNK_CHARS : BROWSER_CHUNK_CHARS);
-			index = 0;
 			setUi("speaking", "暂停朗读");
 			if (useEdge) void speakEdgeFrom(0);
 			else speakBrowserFrom(0);
