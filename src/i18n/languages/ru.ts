@@ -319,7 +319,9 @@ export const ru: Translation = {
 	[Key.siteStatsTotalWords]: "Всего слов",
 	[Key.siteStatsRunningDays]: "Дней работы",
 	[Key.siteStatsLastUpdate]: "Последняя активность",
-	[Key.siteStatsDaysAgo]: "{days} дней назад",
+
+	[Key.siteStatsPageviews]: "Просмотры",
+	[Key.siteStatsVisitors]: "Посетители",	[Key.siteStatsDaysAgo]: "{days} дней назад",
 	[Key.siteStatsDays]: "{days} дней",
 	[Key.today]: "Сегодня",
 

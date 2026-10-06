@@ -89,6 +89,20 @@ const stats: SiteStat[] = [
 		formatted: true,
 	},
 	{
+		icon: "material-symbols:bar-chart-rounded",
+		label: i18n(I18nKey.siteStatsPageviews),
+		value: "—",
+		dynamic: true,
+		id: "site-pageviews",
+	},
+	{
+		icon: "material-symbols:group-outline-rounded",
+		label: i18n(I18nKey.siteStatsVisitors),
+		value: "—",
+		dynamic: true,
+		id: "site-visitors",
+	},
+	{
 		icon: "material-symbols:calendar-clock-outline",
 		label: i18n(I18nKey.siteStatsRunningDays),
 		value: 0, // 将由客户端更新
@@ -138,6 +152,27 @@ const stats: SiteStat[] = [
 </WidgetLayout>
 
 <script is:inline define:vars={{ siteStartDate, lastPostDate, todayText }}>
+  // 访问统计来自 D1（/api/stats/visit），不可用时静默隐藏这两行
+  async function loadVisitStats() {
+    const rows = document.querySelectorAll('[data-stat-id="site-pageviews"], [data-stat-id="site-visitors"]');
+    if (rows.length === 0) return;
+    try {
+      const response = await fetch("/api/stats/visit", { headers: { Accept: "application/json" } });
+      if (!response.ok) throw new Error(String(response.status));
+      const body = await response.json();
+      const data = body.data || {};
+      if (!data.available) throw new Error("unavailable");
+      document.querySelectorAll('[data-stat-id="site-pageviews"]').forEach((el) => {
+        el.textContent = Number(data.pageviews || 0).toLocaleString();
+      });
+      document.querySelectorAll('[data-stat-id="site-visitors"]').forEach((el) => {
+        el.textContent = Number(data.visitors || 0).toLocaleString();
+      });
+    } catch {
+      rows.forEach((el) => { const row = el.closest("div.flex"); if (row) row.style.display = "none"; });
+    }
+  }
+
   function updateDynamicStats() {
     const today = new Date();
 
@@ -176,9 +211,11 @@ const stats: SiteStat[] = [
 
   // 页面加载时更新
   updateDynamicStats();
+  loadVisitStats();
 
   // 页面切换时重新更新
   document.addEventListener("swup:contentReplaced", () => {
     setTimeout(updateDynamicStats, 100);
+    loadVisitStats();
   });
 </script>

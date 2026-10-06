@@ -317,7 +317,9 @@ export const en: Translation = {
 	[Key.siteStatsTotalWords]: "Total Words",
 	[Key.siteStatsRunningDays]: "Running Days",
 	[Key.siteStatsLastUpdate]: "Last Activity",
-	[Key.siteStatsDaysAgo]: "{days} days ago",
+
+	[Key.siteStatsPageviews]: "Page Views",
+	[Key.siteStatsVisitors]: "Visitors",	[Key.siteStatsDaysAgo]: "{days} days ago",
 	[Key.siteStatsDays]: "{days} days",
 	[Key.today]: "Today",
 

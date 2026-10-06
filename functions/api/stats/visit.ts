@@ -16,19 +16,20 @@ const statsResponse = (
 	);
 
 const originAllowed = (request: Request, env: VisitEnv): boolean => {
-	if (!env.ALLOWED_ORIGIN) return false;
+	// 站点自身的页面默认放行（同源 beacon），ALLOWED_ORIGIN 用于绑定自定义域名等场景
 	let expected = "";
 	try {
-		expected = new URL(env.ALLOWED_ORIGIN).origin;
+		expected = new URL(request.url).origin;
 	} catch {
 		return false;
 	}
 	const origin = request.headers.get("Origin");
-	if (origin) return origin === expected;
+	if (origin) return origin === expected || origin === env.ALLOWED_ORIGIN;
 	const referer = request.headers.get("Referer");
 	if (!referer) return false;
 	try {
-		return new URL(referer).origin === expected;
+		const refererOrigin = new URL(referer).origin;
+		return refererOrigin === expected || refererOrigin === env.ALLOWED_ORIGIN;
 	} catch {
 		return false;
 	}

@@ -316,7 +316,9 @@ export const ja: Translation = {
 	[Key.siteStatsTotalWords]: "総文字数",
 	[Key.siteStatsRunningDays]: "運用日数",
 	[Key.siteStatsLastUpdate]: "最終活動",
-	[Key.siteStatsDaysAgo]: "{days} 日前",
+
+	[Key.siteStatsPageviews]: "総閲覧数",
+	[Key.siteStatsVisitors]: "ユニーク訪問者",	[Key.siteStatsDaysAgo]: "{days} 日前",
 	[Key.siteStatsDays]: "{days} 日",
 	[Key.today]: "今日",
 

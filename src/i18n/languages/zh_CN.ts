@@ -308,7 +308,9 @@ export const zh_CN: Translation = {
 	[Key.siteStatsTotalWords]: "总字数",
 	[Key.siteStatsRunningDays]: "运行时长",
 	[Key.siteStatsLastUpdate]: "最后活动",
-	[Key.siteStatsDaysAgo]: "{days} 天前",
+
+	[Key.siteStatsPageviews]: "总访问量",
+	[Key.siteStatsVisitors]: "独立访客",	[Key.siteStatsDaysAgo]: "{days} 天前",
 	[Key.siteStatsDays]: "{days} 天",
 	[Key.today]: "今天",
 

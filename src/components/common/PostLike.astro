@@ -1,0 +1,183 @@
+---
+import { Icon } from "astro-icon/components";
+
+// 文章点赞：匿名 UUID 去重（可再次点击取消），计数存 D1。
+// 数据库不可用时整个按钮隐藏，不影响阅读。
+---
+
+<button
+	id="post-like-btn"
+	type="button"
+	class="transition h-6 rounded-md bg-black/5 dark:bg-white/10 text-black/50 dark:text-white/50 flex items-center justify-center gap-1 px-2 hover:text-[var(--primary)]"
+	title="给这篇文章点个赞"
+	data-liked="false"
+	hidden
+>
+	<Icon is:inline name="material-symbols:favorite-outline-rounded" class="like-heart text-[1.1rem]" />
+	<span class="like-count text-xs font-bold">…</span>
+</button>
+
+<script>
+	(() => {
+		const likeWindow = window as Window & {
+			__postLikeInit?: boolean;
+			__postLikeBind?: () => void;
+		};
+		if (likeWindow.__postLikeInit) {
+			likeWindow.__postLikeBind?.();
+			return;
+		}
+		likeWindow.__postLikeInit = true;
+
+		const LIKE_KEY_PREFIX = "firefly-post-liked:";
+
+		const getVisitorId = (): string => {
+			try {
+				let id = localStorage.getItem("firefly-visitor-id");
+				if (!id) {
+					id = (
+						crypto.randomUUID
+							? crypto.randomUUID()
+							: String(Date.now()) + Math.random().toString(36).slice(2)
+					).replace(/[^A-Za-z0-9_-]/g, "");
+					localStorage.setItem("firefly-visitor-id", id);
+				}
+				return id;
+			} catch {
+				return "";
+			}
+		};
+
+		const localSlug = (): string => {
+			// /posts/{slug}/ → {slug}
+			const match = location.pathname.match(/^\/posts\/([a-z0-9][a-z0-9-]{0,79})\/?$/);
+			return match ? (match[1] as string) : "";
+		};
+
+		const readLocalLiked = (slug: string): boolean => {
+			try {
+				return localStorage.getItem(LIKE_KEY_PREFIX + slug) === "1";
+			} catch {
+				return false;
+			}
+		};
+
+		const writeLocalLiked = (slug: string, liked: boolean) => {
+			try {
+				if (liked) localStorage.setItem(LIKE_KEY_PREFIX + slug, "1");
+				else localStorage.removeItem(LIKE_KEY_PREFIX + slug);
+			} catch {
+				/* 忽略 */
+			}
+		};
+
+		const render = (
+			btn: HTMLButtonElement,
+			likes: number,
+			liked: boolean,
+		) => {
+			const countEl = btn.querySelector(".like-count");
+			if (countEl) countEl.textContent = String(likes);
+			btn.dataset.liked = String(liked);
+			btn.title = liked ? "已经点过赞啦，再点一次可取消" : "给这篇文章点个赞";
+		};
+
+		const pop = (btn: HTMLButtonElement) => {
+			btn.classList.remove("like-pop");
+			// 强制重排以重启动画
+			void btn.offsetWidth;
+			btn.classList.add("like-pop");
+		};
+
+		const bind = () => {
+			const btn = document.getElementById(
+				"post-like-btn",
+			) as HTMLButtonElement | null;
+			if (!btn || btn.dataset.likeBound === "1") return;
+			btn.dataset.likeBound = "1";
+			const slug = localSlug();
+			if (!slug) {
+				btn.hidden = true;
+				return;
+			}
+			const liked = readLocalLiked(slug);
+			render(btn, Number(btn.querySelector(".like-count")?.textContent) || 0, liked);
+
+			// 拉取当前总数；不可用时隐藏按钮
+			fetch(`/api/like?slug=${encodeURIComponent(slug)}`)
+				.then((r) => r.json())
+				.then((body) => {
+					const data = body.data || {};
+					if (!data.available) {
+						btn.hidden = true;
+						return;
+					}
+					btn.hidden = false;
+					render(btn, Number(data.likes) || 0, readLocalLiked(slug));
+				})
+				.catch(() => {
+					btn.hidden = true;
+				});
+
+			btn.addEventListener("click", () => {
+				if (btn.dataset.busy === "1") return;
+				const visitor = getVisitorId();
+				if (!visitor) return;
+				btn.dataset.busy = "1";
+				fetch("/api/like", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ slug, visitor }),
+				})
+					.then((r) => r.json())
+					.then((body) => {
+						const data = body.data || {};
+						if (!data.available) return;
+						const liked = Boolean(data.liked);
+						writeLocalLiked(slug, liked);
+						render(btn, Number(data.likes) || 0, liked);
+						if (liked) pop(btn);
+					})
+					.catch(() => {})
+					.finally(() => {
+						delete btn.dataset.busy;
+					});
+			});
+		};
+
+		likeWindow.__postLikeBind = bind;
+		bind();
+	})();
+</script>
+
+<style>
+	#post-like-btn :global(.like-heart) {
+		transition:
+			transform 0.2s ease,
+			color 0.2s ease;
+	}
+
+	#post-like-btn[data-liked="true"] {
+		color: var(--primary);
+	}
+
+	#post-like-btn[data-liked="true"] :global(.like-heart) {
+		transform: scale(1.12);
+	}
+
+	#post-like-btn.like-pop :global(.like-heart) {
+		animation: like-heart-pop 0.45s ease;
+	}
+
+	@keyframes like-heart-pop {
+		0% {
+			transform: scale(1);
+		}
+		40% {
+			transform: scale(1.55);
+		}
+		100% {
+			transform: scale(1.12);
+		}
+	}
+</style>

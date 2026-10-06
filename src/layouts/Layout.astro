@@ -644,6 +644,42 @@ const siteLang = lang.replace("_", "-");
         });
       })();
     </script>
+    <script is:inline>
+      // 访问统计 beacon：同源上报到 /api/stats/visit（D1 计数）。
+      // 每个浏览器生成一次匿名 UUID（无个人身份信息），同一会话内同一路径只计一次。
+      (() => {
+        const getVisitorId = () => {
+          try {
+            let id = localStorage.getItem("firefly-visitor-id");
+            if (!id) {
+              id = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(36).slice(2)).replace(/[^A-Za-z0-9_-]/g, "");
+              localStorage.setItem("firefly-visitor-id", id);
+            }
+            return id;
+          } catch {
+            return "";
+          }
+        };
+        const sendVisit = () => {
+          if (location.pathname.startsWith("/admin")) return;
+          try {
+            const key = "firefly-pv:" + location.pathname;
+            if (sessionStorage.getItem(key)) return;
+            const visitor = getVisitorId();
+            if (!visitor) return;
+            sessionStorage.setItem(key, "1");
+            fetch("/api/stats/visit", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ visitor }),
+              keepalive: true,
+            }).catch(() => {});
+          } catch {}
+        };
+        sendVisit();
+        document.addEventListener("swup:page:view", sendVisit);
+      })();
+    </script>
   </body>
 </html>
 
