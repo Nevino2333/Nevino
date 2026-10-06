@@ -1,122 +1,75 @@
 ---
 import { Icon } from "astro-icon/components";
-import noticeHtml from "@/data/notice.html?raw";
+import { changelogEntries } from "@/data/changelog";
 import MainGridLayout from "@/layouts/MainGridLayout.astro";
 
-const noticePath = "src/data/notice.html";
-
-const articlePattern =
-	/<article class="notice-main notice-view" data-notice-version="([^"]+)"(?: hidden)?>([\s\S]*?)<\/article>/g;
-
-const noticeArticles = Array.from(noticeHtml.matchAll(articlePattern)).map(
-	(match) => ({
-		version: match[1],
-		html: match[2].trim(),
-	}),
-);
-
-const notices = [
-	{
-		version: "2026-08-28",
-		kicker: "UPDATE / 2026.8.28",
-		title: "博客初始化完成",
-		desc: "从零搭建的全新个人博客已上线，后台写作与发布链路已就绪。",
-		brief: "正式开站，开始记录学习与生活",
-		sections: {},
-		labels: {},
-	},
-];
-
-const articleByVersion = new Map(
-	noticeArticles.map((article) => [article.version, article.html]),
-);
-
-const availableNotices = notices.filter((notice) =>
-	articleByVersion.has(notice.version),
-);
-const latestNotice = availableNotices[0] ?? notices[0];
-const latestNoticeVersion = latestNotice.version;
-const noticeMetaJson = JSON.stringify(
-	Object.fromEntries(notices.map((notice) => [notice.version, notice])),
-);
+const latest = changelogEntries[0];
+const formatDate = (date: string) => date.replaceAll("-", ".");
 ---
 
-<MainGridLayout title="更新日志" description="博客功能与内容更新公告">
-	<section
-		class="notice-page"
-		data-notice-root
-		data-latest-notice-version={latestNoticeVersion}
-		data-notice-views={noticeMetaJson}
-	>
-		<aside class="notice-aside">
-			<section class="notice-hero">
-				<div class="notice-hero-kicker">
+<MainGridLayout title="更新日志" description="博客功能与内容更新记录">
+	<section class="log-page">
+		<aside class="log-aside">
+			<section class="log-hero card-base onload-animation">
+				<p class="log-kicker">
 					<Icon is:inline name="material-symbols:history-edu-rounded" />
-					<span data-notice-kicker>{latestNotice.kicker}</span>
-					<span class="notice-new-badge" data-notice-new-badge>NEW</span>
-				</div>
-				<h1 data-notice-title>{latestNotice.title}</h1>
-				<p data-notice-desc>{latestNotice.desc}</p>
-				<div class="notice-version">
-					<span>公告版本</span>
-					<strong data-notice-version>{latestNotice.version}</strong>
-				</div>
+					<span>CHANGELOG</span>
+				</p>
+				<h1>{latest.title}</h1>
+				<p class="log-brief text-75">{latest.brief}</p>
+				<p class="log-date">
+					<span>最近更新</span>
+					<strong>{formatDate(latest.date)}</strong>
+				</p>
 			</section>
 
-			<nav class="notice-nav" aria-label="公告目录">
-				<p class="notice-nav-title">快速查看</p>
-				<a href="#summary" data-section="summary"><i></i>本次更新内容</a>
-				<a href="#sheet-maker" data-section="sheet-maker"><i></i>表格制作变化</a>
-				<a href="#export-order" data-section="universal"><i></i>检查方法</a>
-				<a href="#history" data-section="interface"><i></i>公告历史</a>
-				<a href="#checklist" data-section="checklist"><i></i>更新后检查</a>
+			<nav class="log-nav card-base onload-animation" aria-label="更新目录">
+				<p class="log-nav-title">快速跳转</p>
+				{changelogEntries.map((entry, index) => (
+					<a href={`#log-${index}`}>
+						<i></i>
+						<span class="log-nav-date">{formatDate(entry.date)}</span>
+						{entry.title}
+					</a>
+				))}
 			</nav>
-
-			<section class="notice-history" aria-label="历史公告">
-				<div class="notice-history-title">
-					<Icon is:inline name="material-symbols:history-rounded" />
-					<span>历史公告</span>
-				</div>
-				<div class="history-card">
-					{availableNotices.map((notice, index) => (
-						<button
-							class:list={["history-entry", index === 0 && "active"]}
-							type="button"
-							data-notice-button={notice.version}
-						>
-							<strong>
-								{notice.version.replaceAll("-", ".").replace(".0", ".")} {index === 0 ? "最新公告" : "更新公告"}
-								{index === 0 && <span class="history-new-badge">NEW</span>}
-							</strong>
-							<span>{notice.brief}</span>
-						</button>
-					))}
-				</div>
-			</section>
 		</aside>
 
-		<div class="notice-content">
-			{availableNotices.length > 0 ? (
-				availableNotices.map((notice, index) => (
-					<article
-						class="notice-main notice-view"
-						data-notice-version={notice.version}
-						hidden={index !== 0}
-						set:html={articleByVersion.get(notice.version)}
-					/>
-				))
-			) : (
-				<article class="notice-main notice-empty">
-					<h2>暂时没有读取到公告</h2>
-					<p>请确认主项目公告文件存在：{noticePath}</p>
+		<div class="log-timeline">
+			{changelogEntries.map((entry, index) => (
+				<article class="log-entry card-base" id={`log-${index}`}>
+					<div class="log-entry-dot" aria-hidden="true"></div>
+					<header>
+						<p class="log-entry-date">
+							<Icon is:inline name="material-symbols:calendar-month-rounded" />
+							<span>{formatDate(entry.date)}</span>
+						</p>
+						<h2>{entry.title}</h2>
+						<p class="log-entry-brief text-75">{entry.brief}</p>
+						<div class="log-tags">
+							{entry.tags.map((tag) => (
+								<span class="log-tag">{tag}</span>
+							))}
+						</div>
+					</header>
+					<ul class="log-items">
+						{entry.items.map((item) => (
+							<li>
+								<span class="log-item-icon">
+									<Icon is:inline name={item.icon} />
+								</span>
+								<span class="text-75">{item.text}</span>
+							</li>
+						))}
+					</ul>
 				</article>
-			)}
+			))}
 		</div>
 	</section>
 </MainGridLayout>
 
 <style>
-	.notice-page {
+	.log-page {
 		display: grid;
 		grid-template-columns: minmax(13rem, 15rem) minmax(0, 1fr);
 		gap: 1rem;
@@ -124,53 +77,26 @@ const noticeMetaJson = JSON.stringify(
 		width: 100%;
 		position: relative;
 		z-index: 1;
-		--notice-ink: rgb(0 0 0 / 0.9);
-		--notice-muted: rgb(0 0 0 / 0.6);
-		--notice-soft: rgb(0 0 0 / 0.42);
-		--notice-panel: color-mix(in oklab, var(--card-bg) 72%, transparent);
-		--notice-panel-strong: color-mix(in oklab, var(--card-bg) 86%, transparent);
 	}
 
-	:global(:root.dark) .notice-page {
-		--notice-ink: rgb(255 255 255 / 0.9);
-		--notice-muted: rgb(255 255 255 / 0.62);
-		--notice-soft: rgb(255 255 255 / 0.42);
-	}
-
-	.notice-aside {
+	.log-aside {
 		position: sticky;
 		top: 4.75rem;
 		display: grid;
 		gap: 0.75rem;
 	}
 
-	.notice-hero,
-	.notice-nav,
-	.notice-history,
-	.notice-main,
-	.notice-section,
-	.notice-lead,
-	.feature-box,
-	.tool-block,
-	.tutorial-step {
-		border: 1px solid color-mix(in oklab, var(--line-divider) 75%, transparent);
-		background: var(--notice-panel);
-		backdrop-filter: blur(18px);
-		box-shadow: 0 14px 38px rgb(0 0 0 / 0.045);
-	}
-
-	.notice-hero,
-	.notice-nav,
-	.notice-history,
-	.notice-main {
+	.log-hero,
+	.log-nav,
+	.log-entry {
 		border-radius: var(--radius-large);
 	}
 
-	.notice-hero {
-		padding: 1rem;
+	.log-hero {
+		padding: 1.1rem;
 	}
 
-	.notice-hero-kicker {
+	.log-kicker {
 		display: inline-flex;
 		align-items: center;
 		gap: 0.4rem;
@@ -181,122 +107,78 @@ const noticeMetaJson = JSON.stringify(
 		background: color-mix(in oklab, var(--primary) 13%, transparent);
 		font-size: 0.76rem;
 		font-weight: 850;
+		letter-spacing: 0.08em;
 	}
 
-	.notice-new-badge,
-	.history-new-badge {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		min-height: 1.38rem;
-		padding: 0.16rem 0.54rem;
-		border-radius: 0.35rem;
-		color: white;
-		background: linear-gradient(135deg, #00b7ff, #007aff);
-		box-shadow:
-			0 0.42rem 1rem rgb(0 183 255 / 0.3),
-			inset 0 1px 0 rgb(255 255 255 / 0.38);
-		font-size: 0.7rem;
-		font-weight: 950;
-		line-height: 1;
-		letter-spacing: 0;
-	}
-
-	.notice-new-badge {
-		position: relative;
-		margin-left: 0.12rem;
-		transform: rotate(-3deg);
-	}
-
-	.notice-new-badge::after {
-		content: "";
-		position: absolute;
-		right: -0.3rem;
-		top: 50%;
-		width: 0;
-		height: 0;
-		border-top: 0.35rem solid transparent;
-		border-bottom: 0.35rem solid transparent;
-		border-left: 0.35rem solid #007aff;
-		transform: translateY(-50%);
-	}
-
-	.notice-new-badge[hidden] {
-		display: none;
-	}
-
-	.notice-hero h1 {
+	.log-hero h1 {
 		margin: 0;
-		color: var(--notice-ink);
 		font-size: 1.35rem;
 		line-height: 1.35;
 		font-weight: 900;
-		letter-spacing: 0;
 	}
 
-	.notice-hero p {
-		margin: 0.65rem 0 0;
-		color: var(--notice-muted);
+	.log-brief {
+		margin: 0.6rem 0 0;
 		font-size: 0.88rem;
-		line-height: 1.72;
+		line-height: 1.7;
 	}
 
-	.notice-version {
+	.log-date {
 		display: flex;
 		justify-content: space-between;
 		gap: 0.6rem;
-		margin-top: 0.85rem;
-		padding: 0.65rem 0.7rem;
+		margin: 0.85rem 0 0;
+		padding: 0.6rem 0.7rem;
 		border-radius: 0.65rem;
-		color: var(--notice-muted);
 		background: color-mix(in oklab, var(--primary) 9%, transparent);
 		font-size: 0.76rem;
 		font-weight: 800;
 	}
 
-	.notice-version strong {
+	.log-date strong {
 		color: var(--primary);
 	}
 
-	.notice-nav {
+	.log-nav {
 		padding: 0.7rem;
 	}
 
-	.notice-nav-title,
-	.notice-history-title {
+	.log-nav-title,
+	.log-entry-date {
 		display: flex;
 		align-items: center;
 		gap: 0.38rem;
-		margin: 0 0 0.55rem;
-		color: var(--notice-soft);
 		font-size: 0.76rem;
 		font-weight: 900;
 	}
 
-	.notice-nav a {
+	.log-nav-title {
+		margin: 0 0 0.55rem;
+		opacity: 0.55;
+	}
+
+	.log-nav a {
 		display: flex;
 		align-items: center;
 		gap: 0.45rem;
 		min-height: 2rem;
 		padding: 0.45rem 0.55rem;
 		border-radius: 0.5rem;
-		color: var(--notice-muted);
-		text-decoration: none;
 		font-size: 0.82rem;
-		font-weight: 850;
+		font-weight: 700;
 		transition:
 			background 0.2s ease,
 			color 0.2s ease,
 			transform 0.2s ease;
 	}
 
-	.notice-nav a:hover {
+	.log-nav a:hover {
 		color: var(--primary);
 		background: color-mix(in oklab, var(--primary) 12%, transparent);
 		transform: translateX(0.12rem);
 	}
 
-	.notice-nav i {
+	.log-nav i {
 		width: 0.42rem;
 		height: 0.42rem;
 		border-radius: 999px;
@@ -304,569 +186,119 @@ const noticeMetaJson = JSON.stringify(
 		flex: 0 0 auto;
 	}
 
-	.notice-history {
-		padding: 0.7rem;
+	.log-nav-date {
+		flex: 0 0 auto;
+		font-size: 0.74rem;
+		font-weight: 850;
+		opacity: 0.6;
 	}
 
-	.history-card {
+	.log-timeline {
 		display: grid;
-		gap: 0.45rem;
+		gap: 1rem;
 	}
 
-	.history-entry {
+	.log-entry {
 		position: relative;
-		width: 100%;
-		display: grid;
-		gap: 0.25rem;
-		padding: 0.78rem 0.75rem;
-		border: 1px solid transparent;
-		border-radius: 0.55rem;
-		background: transparent;
-		color: inherit;
-		text-align: left;
-		cursor: pointer;
-		font: inherit;
-		transition:
-			background 0.2s ease,
-			border-color 0.2s ease,
-			transform 0.2s ease;
-	}
-
-	.history-entry:hover,
-	.history-entry.active {
-		border-color: color-mix(in oklab, var(--primary) 24%, var(--line-divider));
-		background: color-mix(in oklab, var(--primary) 11%, transparent);
-		transform: translateX(0.1rem);
-	}
-
-	.history-entry strong {
-		display: flex;
-		align-items: center;
-		gap: 0.38rem;
-		color: var(--notice-ink);
-		font-size: 0.83rem;
-		line-height: 1.35;
-	}
-
-	.history-new-badge {
-		position: absolute;
-		top: -0.5rem;
-		right: 0.45rem;
-		min-height: 1.35rem;
-		padding: 0.18rem 0.5rem;
-		border: 2px solid color-mix(in oklab, var(--card-bg) 92%, transparent);
-		border-radius: 999px;
-		font-size: 0.66rem;
-		transform: rotate(4deg);
-	}
-
-	.history-entry .history-new-badge {
-		color: white !important;
-	}
-
-	.history-entry span {
-		color: var(--notice-muted);
-		font-size: 0.75rem;
-		line-height: 1.48;
-	}
-
-	.notice-content {
-		min-width: 0;
-	}
-
-	.notice-main {
+		padding: 1.15rem 1.25rem 1.25rem;
 		scroll-margin-top: 6rem;
-		padding: 1.15rem;
-		min-width: 0;
-		color: var(--notice-ink);
 	}
 
-	.notice-main[hidden] {
-		display: none;
-	}
-
-	.notice-main :global(.notice-lead) {
-		margin: 0 0 1rem;
-		padding: 1rem;
-		border-radius: 0.85rem;
-		color: var(--notice-muted);
-		line-height: 1.85;
-	}
-
-	.notice-main :global(.notice-tag-row) {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.45rem;
-		margin: 0 0 1rem;
-	}
-
-	.notice-main :global(.notice-tag),
-	.notice-main :global(.tool-chip) {
-		display: inline-flex;
-		align-items: center;
-		min-height: 1.75rem;
-		padding: 0.32rem 0.55rem;
+	.log-entry-dot {
+		position: absolute;
+		left: -1.42rem;
+		top: 1.55rem;
+		width: 0.55rem;
+		height: 0.55rem;
 		border-radius: 999px;
+		background: var(--primary);
+		box-shadow: 0 0 0 0.28rem color-mix(in oklab, var(--primary) 18%, transparent);
+	}
+
+	.log-entry-date {
+		margin: 0 0 0.35rem;
 		color: var(--primary);
-		background: color-mix(in oklab, var(--primary) 12%, transparent);
-		font-size: 0.75rem;
-		font-weight: 900;
 	}
 
-	.notice-main :global(.notice-section) {
-		container: notice-section / inline-size;
-		margin-top: 0.85rem;
-		padding: 1rem;
-		border-radius: 0.85rem;
-	}
-
-	.notice-main :global(.section-head) {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.75rem;
-		margin-bottom: 0.75rem;
-		padding-bottom: 0.65rem;
-		border-bottom: 1px solid color-mix(in oklab, var(--line-divider) 75%, transparent);
-	}
-
-	.notice-main :global(.section-head h2) {
+	.log-entry h2 {
 		margin: 0;
-		color: var(--notice-ink);
-		font-size: 1.05rem;
-		line-height: 1.42;
-		font-weight: 900;
-		letter-spacing: 0;
-	}
-
-	.notice-main :global(.section-index) {
-		color: var(--primary);
-		font-size: 0.78rem;
+		font-size: 1.12rem;
+		line-height: 1.4;
 		font-weight: 900;
 	}
 
-	.notice-main :global(h3) {
-		margin: 1rem 0 0.5rem;
-		color: var(--notice-ink);
-		font-size: 0.98rem;
-		line-height: 1.45;
-		font-weight: 900;
-		letter-spacing: 0;
-	}
-
-	.notice-main :global(p) {
-		color: var(--notice-muted);
-		line-height: 1.82;
-	}
-
-	.notice-main :global(.notice-list) {
-		display: grid;
-		gap: 0.6rem;
-		margin: 0;
-		padding: 0;
-		list-style: none;
-	}
-
-	.notice-main :global(.notice-list li) {
-		display: grid;
-		grid-template-columns: 1.75rem minmax(0, 1fr);
-		gap: 0.6rem;
-		padding: 0.7rem;
-		border-radius: 0.7rem;
-		border: 1px solid color-mix(in oklab, var(--line-divider) 70%, transparent);
-		background: var(--notice-panel-strong);
-		color: var(--notice-muted);
-		line-height: 1.75;
-	}
-
-	.notice-main :global(.num) {
-		width: 1.75rem;
-		height: 1.75rem;
-		display: grid;
-		place-items: center;
-		border-radius: 0.55rem;
-		background: color-mix(in oklab, var(--primary) 12%, transparent);
-		color: var(--primary);
-		font-size: 0.75rem;
-		font-weight: 900;
-	}
-
-	.notice-main :global(.feature-grid),
-	.notice-main :global(.tutorial-grid) {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
-		gap: 0.7rem;
-	}
-
-	.notice-main :global(.feature-box),
-	.notice-main :global(.tool-block),
-	.notice-main :global(.tutorial-step),
-	.notice-main :global(.notice-note),
-	.notice-main :global(.notice-warning) {
-		border-radius: 0.75rem;
-	}
-
-	.notice-main :global(.feature-box),
-	.notice-main :global(.tool-block) {
-		padding: 0.9rem;
-	}
-
-	.notice-main :global(.feature-box) {
-		border: 1px solid color-mix(in oklab, var(--primary) 22%, var(--line-divider));
-		background:
-			linear-gradient(
-				135deg,
-				color-mix(in oklab, var(--primary) 8%, var(--card-bg)),
-				color-mix(in oklab, var(--card-bg) 92%, transparent)
-			);
-		box-shadow:
-			inset 0 1px 0 rgb(255 255 255 / 0.55),
-			0 0.65rem 1.6rem color-mix(in oklab, var(--primary) 8%, transparent);
-	}
-
-	.notice-main :global(.feature-box h3) {
-		margin-top: 0;
-		color: var(--notice-ink);
-	}
-
-	.notice-main :global(.feature-box p) {
-		margin-bottom: 0;
-	}
-
-	.notice-main :global(.tool-title) {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.7rem;
-		margin-bottom: 0.45rem;
-	}
-
-	.notice-main :global(.notice-note),
-	.notice-main :global(.notice-warning) {
-		margin: 0.75rem 0;
-		padding: 0.75rem 0.85rem;
-		line-height: 1.75;
-	}
-
-	.notice-main :global(.notice-note) {
-		color: color-mix(in oklab, var(--primary) 78%, var(--notice-ink));
-		background: color-mix(in oklab, var(--primary) 10%, transparent);
-		border: 1px solid color-mix(in oklab, var(--primary) 20%, transparent);
-	}
-
-	.notice-main :global(.notice-warning) {
-		color: color-mix(in oklab, #d97706 70%, var(--notice-ink));
-		background: color-mix(in oklab, #f59e0b 11%, transparent);
-		border: 1px solid color-mix(in oklab, #f59e0b 24%, transparent);
-	}
-
-	.notice-main :global(.tutorial-grid) {
-		counter-reset: step;
-		margin-top: 0.7rem;
-	}
-
-	.notice-main :global(.tutorial-step) {
-		counter-increment: step;
-		position: relative;
-		min-height: 5.5rem;
-		padding: 0.85rem 0.9rem 0.85rem 3rem;
-		color: var(--notice-muted);
+	.log-entry-brief {
+		margin: 0.4rem 0 0;
+		font-size: 0.88rem;
 		line-height: 1.7;
 	}
 
-	.notice-main :global(.tutorial-step::before) {
-		content: counter(step);
-		position: absolute;
-		left: 0.75rem;
-		top: 0.85rem;
-		width: 1.55rem;
-		height: 1.55rem;
-		display: grid;
-		place-items: center;
-		border-radius: 0.5rem;
-		background: color-mix(in oklab, var(--primary) 12%, transparent);
+	.log-tags {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+		margin-top: 0.7rem;
+	}
+
+	.log-tag {
+		display: inline-flex;
+		align-items: center;
+		min-height: 1.6rem;
+		padding: 0.22rem 0.55rem;
+		border-radius: 999px;
 		color: var(--primary);
-		font-size: 0.75rem;
-		font-weight: 900;
+		background: color-mix(in oklab, var(--primary) 12%, transparent);
+		font-size: 0.74rem;
+		font-weight: 800;
 	}
 
-	.notice-main :global(.tutorial-step strong) {
-		display: block;
-		margin-bottom: 0.18rem;
-		color: var(--notice-ink);
-	}
-
-	.notice-main :global(.checklist) {
+	.log-items {
 		display: grid;
-		gap: 0.5rem;
-		margin: 0;
+		gap: 0.55rem;
+		margin: 0.95rem 0 0;
 		padding: 0;
 		list-style: none;
 	}
 
-	.notice-main :global(.checklist li) {
-		position: relative;
-		padding-left: 1.3rem;
-		color: var(--notice-muted);
-		line-height: 1.75;
-	}
-
-	.notice-main :global(.checklist li::before) {
-		content: "";
-		position: absolute;
-		left: 0;
-		top: 0.68em;
-		width: 0.48rem;
-		height: 0.48rem;
-		border-radius: 999px;
-		background: var(--primary);
-		box-shadow: 0 0 0 0.22rem color-mix(in oklab, var(--primary) 12%, transparent);
-	}
-
-	.notice-main :global(code) {
-		padding: 0.12rem 0.35rem;
-		border-radius: 0.35rem;
-		background: color-mix(in oklab, var(--primary) 10%, transparent);
-		color: var(--primary);
-		font-size: 0.9em;
-	}
-
-	.notice-main :global(.notice-table-wrap) {
-		width: 100%;
-		margin: 0.75rem 0;
-		overflow-x: auto;
-		border-radius: 0.75rem;
-		-webkit-overflow-scrolling: touch;
-		overscroll-behavior-x: contain;
-	}
-
-	.notice-main :global(.notice-table) {
-		width: 100%;
-		min-width: 48rem;
-		margin: 0;
-		border: 1px solid color-mix(in oklab, var(--line-divider) 78%, transparent);
-		border-collapse: separate;
-		border-spacing: 0;
-		border-radius: 0.75rem;
-		overflow: hidden;
-		table-layout: fixed;
-		color: var(--notice-muted);
-		font-size: 0.86rem;
-		line-height: 1.65;
-	}
-
-	.notice-main :global(.notice-table th),
-	.notice-main :global(.notice-table td) {
-		padding: 0.72rem 0.75rem;
-		border: 0;
-		border-bottom: 1px solid color-mix(in oklab, var(--line-divider) 68%, transparent);
-		text-align: left;
-		vertical-align: top;
-		overflow-wrap: anywhere;
-	}
-
-	.notice-main :global(.notice-table th) {
-		color: var(--notice-ink);
-		background: color-mix(in oklab, var(--primary) 9%, var(--notice-panel-strong));
-		font-weight: 900;
-	}
-
-	.notice-main :global(.notice-table th:nth-child(1)) {
-		width: 5.5rem;
-	}
-
-	.notice-main :global(.notice-table th:nth-child(2)) {
-		width: 41%;
-	}
-
-	.notice-main :global(.notice-table th:nth-child(3)) {
-		width: 30%;
-	}
-
-	.notice-main :global(.notice-table th:nth-child(4)) {
-		width: 9.5rem;
-	}
-
-	.notice-main :global(.notice-table tbody tr:nth-child(even) td) {
-		background: color-mix(in oklab, var(--primary) 4%, transparent);
-	}
-
-	.notice-main :global(.notice-table tbody tr:last-child td) {
-		border-bottom: 0;
-	}
-
-	.notice-main :global(.notice-table td:first-child) {
-		color: var(--notice-ink);
-		font-weight: 850;
-		white-space: nowrap;
-	}
-
-	.notice-main :global(.notice-table .price-tier) {
-		color: color-mix(in oklab, #15803d 76%, var(--notice-ink));
-		font-weight: 900;
-	}
-
-	.notice-main :global(.notice-table code) {
-		white-space: normal;
-		overflow-wrap: anywhere;
-	}
-
-	@container notice-section (max-width: 46rem) {
-		.notice-main :global(.notice-table-wrap) {
-			overflow: visible;
-		}
-
-		.notice-main :global(.notice-table) {
-			display: block;
-			min-width: 0;
-			border: 0;
-			border-radius: 0;
-			overflow: visible;
-			background: transparent;
-		}
-
-		.notice-main :global(.notice-table thead) {
-			position: absolute;
-			width: 1px;
-			height: 1px;
-			padding: 0;
-			margin: -1px;
-			overflow: hidden;
-			clip: rect(0, 0, 0, 0);
-			white-space: nowrap;
-			border: 0;
-		}
-
-		.notice-main :global(.notice-table tbody) {
-			display: grid;
-			gap: 0.7rem;
-		}
-
-		.notice-main :global(.notice-table tr) {
-			display: grid;
-			grid-template-columns: minmax(0, 1fr) minmax(9rem, auto);
-			grid-template-areas:
-				"market price"
-				"model model"
-				"risk risk";
-			gap: 0.55rem 0.75rem;
-			padding: 0.78rem;
-			border: 1px solid color-mix(in oklab, var(--line-divider) 74%, transparent);
-			border-radius: 0.7rem;
-			background: var(--notice-panel-strong);
-		}
-
-		.notice-main :global(.notice-table td),
-		.notice-main :global(.notice-table tbody tr:nth-child(even) td) {
-			display: grid;
-			gap: 0.22rem;
-			width: auto;
-			padding: 0;
-			border: 0;
-			background: transparent;
-			white-space: normal;
-		}
-
-		.notice-main :global(.notice-table td::before) {
-			color: var(--notice-soft);
-			font-size: 0.7rem;
-			font-weight: 900;
-			line-height: 1.2;
-		}
-
-		.notice-main :global(.notice-table td:nth-child(1)) {
-			grid-area: market;
-		}
-
-		.notice-main :global(.notice-table td:nth-child(1)::before) {
-			content: "\5e02\573a";
-		}
-
-		.notice-main :global(.notice-table td:nth-child(2)) {
-			grid-area: model;
-			padding-top: 0.58rem;
-			border-top: 1px solid color-mix(in oklab, var(--line-divider) 62%, transparent);
-		}
-
-		.notice-main :global(.notice-table td:nth-child(2)::before) {
-			content: "\578b\53f7";
-		}
-
-		.notice-main :global(.notice-table td:nth-child(3)) {
-			grid-area: risk;
-		}
-
-		.notice-main :global(.notice-table td:nth-child(3)::before) {
-			content: "\65e7\7248\672c\98ce\9669";
-		}
-
-		.notice-main :global(.notice-table td:nth-child(4)) {
-			grid-area: price;
-			justify-items: end;
-			text-align: right;
-		}
-
-		.notice-main :global(.notice-table td:nth-child(4)::before) {
-			content: "\6b63\786e\89c4\5219";
-		}
-	}
-
-	@container notice-section (max-width: 28rem) {
-		.notice-main :global(.notice-table tr) {
-			grid-template-columns: minmax(0, 1fr);
-			grid-template-areas:
-				"market"
-				"price"
-				"model"
-				"risk";
-		}
-
-		.notice-main :global(.notice-table td:nth-child(4)) {
-			justify-items: start;
-			text-align: left;
-		}
-	}
-
-	.notice-empty {
+	.log-items li {
 		display: grid;
-		gap: 0.4rem;
+		grid-template-columns: 2rem minmax(0, 1fr);
+		gap: 0.6rem;
+		align-items: start;
+		padding: 0.7rem 0.75rem;
+		border: 1px solid color-mix(in oklab, var(--line-divider) 70%, transparent);
+		border-radius: 0.7rem;
+		background: color-mix(in oklab, var(--card-bg) 60%, transparent);
+		font-size: 0.86rem;
+		line-height: 1.7;
 	}
 
-	.notice-empty h2,
-	.notice-empty p {
-		margin: 0;
+	.log-item-icon {
+		display: grid;
+		place-items: center;
+		width: 1.85rem;
+		height: 1.85rem;
+		border-radius: 0.55rem;
+		color: var(--primary);
+		background: color-mix(in oklab, var(--primary) 12%, transparent);
+		font-size: 1rem;
 	}
 
 	@media (max-width: 1020px) {
-		.notice-page {
+		.log-page {
 			grid-template-columns: 1fr;
 		}
 
-		.notice-aside {
+		.log-aside {
 			position: static;
 		}
 
-		.notice-nav {
+		.log-nav {
+			display: none;
+		}
+
+		.log-entry-dot {
 			display: none;
 		}
 	}
-
-	@media (max-width: 680px) {
-		.notice-main,
-		.notice-hero {
-			padding: 0.9rem;
-		}
-
-		.notice-main :global(.feature-grid),
-		.notice-main :global(.tutorial-grid) {
-			grid-template-columns: 1fr;
-		}
-
-		.notice-main :global(.section-head),
-		.notice-main :global(.tool-title) {
-			align-items: flex-start;
-			flex-direction: column;
-		}
-	}
-
 </style>

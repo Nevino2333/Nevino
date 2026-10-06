@@ -30,13 +30,38 @@ import { url } from "@/utils/url-utils";
             </p>
             
             <!-- 返回首页按钮 -->
-            <a 
+            <a
                 href={url("/")}
                 class="inline-flex items-center gap-2 px-6 py-3 bg-(--primary) text-white rounded-(--radius-large) hover:bg-(--btn-content) transition-colors duration-200 font-medium"
             >
                 <Icon is:inline name="material-symbols:home" class="text-xl" />
                 {i18n(I18nKey.backToHome)}
             </a>
+
+            <!-- 快捷入口 -->
+            <div class="mt-6 flex flex-wrap items-center justify-center gap-2.5">
+                <a
+                    href={url("/random/")}
+                    class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-(--line-divider) text-sm font-medium text-75 hover:text-(--primary) hover:border-(--primary) transition-colors duration-200"
+                >
+                    <Icon is:inline name="material-symbols:shuffle-rounded" class="text-base" />
+                    随手翻一篇
+                </a>
+                <a
+                    href={url("/search/")}
+                    class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-(--line-divider) text-sm font-medium text-75 hover:text-(--primary) hover:border-(--primary) transition-colors duration-200"
+                >
+                    <Icon is:inline name="material-symbols:search-rounded" class="text-base" />
+                    搜一下
+                </a>
+                <a
+                    href={url("/archive/")}
+                    class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-(--line-divider) text-sm font-medium text-75 hover:text-(--primary) hover:border-(--primary) transition-colors duration-200"
+                >
+                    <Icon is:inline name="material-symbols:history-rounded" class="text-base" />
+                    看归档
+                </a>
+            </div>
             
             <!-- 装饰性元素 -->
             <div class="absolute top-4 left-4 opacity-10">
