@@ -37,6 +37,13 @@ const getDynamicNavBarConfig = (): NavBarConfig => {
 	// 更新日志
 	links.push(LinkPresets.Changelog);
 
+	// 随机逛逛：/random 由 Pages Function 提供，302 到随机一篇已发布文章
+	links.push({
+		name: "随机逛逛",
+		url: "/random/",
+		icon: "material-symbols:shuffle",
+	});
+
 	// 足迹地图：有地点数据时才展示入口，避免读者点进空页面
 	if (footprintsConfig.places.length > 0) {
 		links.push(LinkPresets.Footprints);

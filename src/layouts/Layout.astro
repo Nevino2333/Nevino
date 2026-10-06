@@ -623,6 +623,27 @@ const siteLang = lang.replace("_", "-");
         }
       </script>
     )}
+    <script is:inline>
+      // 标题彩蛋：读者切走标签页时挽留一下，回来打招呼后还原。
+      // Swup 切页会更新 document.title，所以每次离开时重新记录基准标题。
+      (() => {
+        let titleBeforeHide = null;
+        let restoreTimer;
+        document.addEventListener("visibilitychange", () => {
+          if (document.hidden) {
+            if (restoreTimer) window.clearTimeout(restoreTimer);
+            titleBeforeHide = document.title;
+            document.title = "⌓‿⌓ 别走！文章要跑掉了…";
+          } else if (titleBeforeHide !== null) {
+            document.title = "ヾ(≧▽≦*)o 欢迎回来！";
+            restoreTimer = window.setTimeout(() => {
+              document.title = titleBeforeHide;
+              titleBeforeHide = null;
+            }, 1200);
+          }
+        });
+      })();
+    </script>
   </body>
 </html>
 

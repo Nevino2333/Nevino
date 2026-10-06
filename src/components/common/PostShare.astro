@@ -1,0 +1,60 @@
+---
+import { Icon } from "astro-icon/components";
+
+// 文章分享：优先 Web Share API（移动端系统面板），桌面端降级复制链接。
+// 标题取 og:title，避免把站点后缀一起带出去。
+---
+
+<button
+	id="post-share-btn"
+	type="button"
+	class="transition h-6 w-6 rounded-md bg-black/5 dark:bg-white/10 text-black/50 dark:text-white/50 flex items-center justify-center hover:text-[var(--primary)]"
+	title="分享本文"
+>
+	<Icon is:inline name="material-symbols:share" class="text-[1.1rem]" />
+</button>
+
+<script>
+	(() => {
+		const shareWindow = window as Window & {
+			__postShareInitialized?: boolean;
+			__postShareBind?: () => void;
+		};
+		if (shareWindow.__postShareInitialized) {
+			shareWindow.__postShareBind?.();
+			return;
+		}
+		shareWindow.__postShareInitialized = true;
+
+		const bind = () => {
+			const btn = document.getElementById("post-share-btn");
+			if (!btn || btn.dataset.shareBound === "1") return;
+			btn.dataset.shareBound = "1";
+			btn.addEventListener("click", async () => {
+				const ogTitle = document.querySelector<HTMLMetaElement>(
+					'meta[property="og:title"]',
+				);
+				const title = ogTitle?.content || document.title;
+				if (navigator.share) {
+					try {
+						await navigator.share({ title, text: `推荐阅读：${title}`, url: location.href });
+					} catch {
+						/* 用户取消分享 */
+					}
+					return;
+				}
+				try {
+					await navigator.clipboard.writeText(location.href);
+					btn.title = "链接已复制";
+					setTimeout(() => {
+						btn.title = "分享本文";
+					}, 1600);
+				} catch {
+					/* 剪贴板不可用（非安全上下文） */
+				}
+			});
+		};
+		shareWindow.__postShareBind = bind;
+		bind();
+	})();
+</script>

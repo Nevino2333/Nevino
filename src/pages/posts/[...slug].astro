@@ -20,6 +20,7 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import CoverImage from "@/components/common/CoverImage.astro";
 import PostTts from "@/components/common/PostTts.astro";
+import PostShare from "@/components/common/PostShare.astro";
 import PostMetadata from "@/components/layout/PostMeta.astro";
 import RecommendedPost from "@/components/misc/RecommendedPost.astro";
 import SharePoster from "@/components/misc/SharePoster.svelte";
@@ -211,6 +212,7 @@ const relatedPosts = await getRelatedPosts(entry, 5);
 					</div>
 				</div>
 				<PostTts />
+				<PostShare />
 				{entry.data.password && (
           <div class="flex flex-row items-center">
             <div
